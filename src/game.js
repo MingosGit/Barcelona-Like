@@ -9,6 +9,8 @@ import { WEAPONS, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS } from "./data/weapons.js";
 import { BOSSES } from "./data/biomes.js";
 import { PASSIVES, SYNERGIES } from "./data/cards.js";
 import { RuleEngine } from "./rules.js";
+import { SKIN_TONES, HAIR_TONES } from "./sprites.js";
+import { sfx } from "./sfx.js";
 
 const CELL = 170; // tamaño de celda para obstáculos procedurales
 
@@ -36,11 +38,31 @@ export class Game {
       dmgMult: s.dmgMult, cdMult: s.cdMult, magnetR: s.magnetR,
       armor: s.armor, regen: s.regen,
       xp: 0, level: 1, xpNext: 12, kills: 0, coins: 0,
-      iframe: 0, stunT: 0, blindT: 0, immobT: 0, slowMul: 1,
+      iframe: 0, stunT: 0, blindT: 0, immobT: 0, slowMul: 1, stickT: 0,
       faceX: 1, faceY: 0, dash: null, stunCd: 0,
       passiveCounts: {}, synergiesTaken: new Set(),
       weapons: [],
     };
+    this.coinMult = s.coinMult || 1;
+
+    // modificadores de dificultad (mutadores)
+    this.spawnRateMult = 1;
+    this.globalEnemySpeed = 1;
+    this.eliteChanceMult = 1;
+    this.eliteFrom = 300;
+    this.rentDrain = 0;
+    this.maxWeaponSlots = MAX_WEAPON_SLOTS;
+    this.modCoinMult = 1;
+    this.mods = opts.mods || [];
+    for (const m of this.mods) {
+      m.apply(this);
+      this.modCoinMult *= m.coinMult;
+    }
+
+    this.streak = 0;
+    this.streakT = 0;
+    this.bassSlow = false; // la banda del altavoz te frena con el bajo
+    this._sfxT = 0;
     this.addWeapon(charDef.startWeapon);
 
     this.time = 0;
@@ -90,10 +112,16 @@ export class Game {
     // sin obstáculos en la zona de aparición
     const ox = cx * CELL + (hash2(cx, cy, this.seed + 1) - 0.5) * CELL * 0.6 + CELL / 2;
     const oy = cy * CELL + (hash2(cx, cy, this.seed + 2) - 0.5) * CELL * 0.6 + CELL / 2;
-    if (Math.hypot(ox, oy) < 140) return null;
-    const emoji = b.obstacles[Math.floor(hash2(cx, cy, this.seed + 3) * b.obstacles.length)];
-    const r = 18 + hash2(cx, cy, this.seed + 4) * 14;
-    return { x: ox, y: oy, r, emoji };
+    if (Math.hypot(ox, oy) < 150) return null;
+    // elige el prop por peso (tienda de fundas, kiosco, farola...)
+    let total = 0;
+    for (const pr of b.props) total += pr.w;
+    let roll = hash2(cx, cy, this.seed + 3) * total;
+    let def = b.props[0];
+    for (const pr of b.props) { roll -= pr.w; if (roll <= 0) { def = pr; break; } }
+    const v = hash2(cx, cy, this.seed + 4);
+    const sign = def.signs ? def.signs[Math.floor(hash2(cx, cy, this.seed + 5) * def.signs.length)] : null;
+    return { x: ox, y: oy, r: def.r * (0.9 + v * 0.25), kind: def.kind, sign, v };
   }
 
   obstaclesNear(x, y, rad) {
@@ -156,7 +184,20 @@ export class Game {
     p.blindT = Math.max(0, p.blindT - dt);
     p.immobT = Math.max(0, p.immobT - dt);
     p.stunCd = Math.max(0, p.stunCd - dt);
+    p.stickT = Math.max(0, p.stickT - dt);
     if (p.regen > 0) p.hp = Math.min(p.maxHp, p.hp + p.regen * dt);
+    if (this.rentDrain > 0) { // modificador "Alquiler al día"
+      p.hp -= this.rentDrain * dt;
+      if (p.hp <= 0 && !this.over) {
+        p.hp = 0;
+        this.over = true;
+        this.killedBy = "alquiler";
+        this.result = { victory: false };
+        sfx.death();
+        this.cb.gameOver(this.buildResult());
+        return;
+      }
+    }
 
     if (p.dash) {
       // embestida del Bicing: iframes y daño a lo que cruces
@@ -188,6 +229,8 @@ export class Game {
         if (z.type === "denuncia") p.immobT = Math.max(p.immobT, 0.1);
       }
       if (this.onSlowPatch(p.x, p.y)) slow *= 0.75;
+      if (this.bassSlow) slow *= 0.78; // el bajo del reggaeton es física aplicada
+      if (p.stickT > 0) slow *= 0.7; // flyers de kebab pegados a los pies
       const spd = p.baseSpeed * p.speedMult * slow;
       p.x += mv.x * spd * dt;
       p.y += mv.y * spd * dt;
@@ -205,6 +248,7 @@ export class Game {
     p.hp -= real;
     p.iframe = 0.45;
     this.shake = 6;
+    sfx.hurt();
     this.floaters.push({ x: p.x, y: p.y - 20, text: `-${Math.round(real)}`, t: 0.8, color: "#ff6b6b", vy: -50 });
     if (navigator.vibrate) navigator.vibrate(30);
     if (p.hp <= 0) {
@@ -212,6 +256,7 @@ export class Game {
       this.over = true;
       this.killedBy = sourceId;
       this.result = { victory: false };
+      sfx.death();
       this.cb.gameOver(this.buildResult());
     }
   }
@@ -221,9 +266,10 @@ export class Game {
     return {
       victory: this.result.victory,
       time: this.time, kills: p.kills, level: p.level,
-      coins: p.coins + (this.result.victory ? 150 : 0),
+      coins: Math.round((p.coins + (this.result.victory ? 150 : 0)) * this.modCoinMult),
       killedBy: this.killedBy,
       biome: this.biome,
+      mods: this.mods.length,
     };
   }
 
@@ -361,6 +407,113 @@ export class Game {
           }
           break;
         }
+        case "homing": { // la chancla no falla nunca
+          S.t -= dt;
+          if (S.t <= 0 && this.enemies.length) {
+            S.t = st.cd * p.cdMult;
+            const pool = this.enemies.filter((e) => !e.state.hidden && dist(p.x, p.y, e.x, e.y) < 520);
+            for (let i = 0; i < st.count && pool.length; i++) {
+              const tgt = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+              const [dx, dy] = norm(tgt.x - p.x, tgt.y - p.y);
+              this.projectiles.push({
+                x: p.x, y: p.y, vx: dx * st.speed, vy: dy * st.speed,
+                homingPlayer: true, target: tgt, speed: st.speed,
+                dmg: st.dmg, emoji: "🩴", rot: 0, ttl: 6, tags: w.def.tags, hit: new Set(),
+              });
+            }
+          }
+          break;
+        }
+        case "bottle": { // litrona: empapa y deja cristales
+          S.t -= dt;
+          if (S.t <= 0) {
+            S.t = st.cd * p.cdMult;
+            const targets = this.enemies.filter((e) => dist(p.x, p.y, e.x, e.y) < 330);
+            const tgt = targets.length ? pick(targets) : { x: p.x + rand(-180, 180), y: p.y + rand(-180, 180) };
+            this.projectiles.push({
+              x: p.x, y: p.y, bomb: true, bottle: true, t: 0, dur: 0.65,
+              x0: p.x, y0: p.y, x1: tgt.x, y1: tgt.y,
+              dmg: st.dmg, radius: st.radius, zoneDur: st.zoneDur,
+              emoji: "🍾", tags: w.def.tags, ttl: 2,
+            });
+          }
+          break;
+        }
+        case "taunt": { // el dürüm atrae y funde
+          S.t -= dt;
+          for (const e of this.enemies) {
+            if (e.boss) continue;
+            const d = dist(p.x, p.y, e.x, e.y);
+            if (d < st.radius * 1.8 && d > 30) {
+              const [dx, dy] = norm(p.x - e.x, p.y - e.y);
+              e.x += dx * st.pull * dt;
+              e.y += dy * st.pull * dt;
+            }
+          }
+          if (S.t <= 0) {
+            S.t = st.tick * p.cdMult;
+            for (const e of this.enemies) {
+              if (dist(p.x, p.y, e.x, e.y) < st.radius + e.r) {
+                this.applyHit(e, st.dmg, w.def.tags, {});
+              }
+            }
+          }
+          break;
+        }
+        case "slam": { // el PERSIANAZO
+          S.t -= dt;
+          if (S.t <= 0 && this.enemies.length) {
+            S.t = st.cd * p.cdMult;
+            const [dx, dy] = this.aimDir(st.range + 100);
+            this.effects.push({ type: "slam", x: p.x, y: p.y, dx, dy, range: st.range, width: st.width, t: 0.28, dur: 0.28 });
+            sfx.slam();
+            this.shake = Math.max(this.shake, 3);
+            for (const e of this.enemies) {
+              const ex = e.x - p.x, ey = e.y - p.y;
+              const fwd = ex * dx + ey * dy;
+              const lat = Math.abs(ex * -dy + ey * dx);
+              if (fwd > -e.r && fwd < st.range + e.r && lat < st.width / 2 + e.r) {
+                this.applyHit(e, st.dmg, w.def.tags, {
+                  dir: [dx, dy], baseKnock: 240,
+                  forceStatus: [{ id: "aturdido", dur: st.stun }],
+                });
+              }
+            }
+          }
+          break;
+        }
+        case "pets": { // escuadrón de palomas
+          if (!S.birds) S.birds = [];
+          while (S.birds.length < st.count) {
+            S.birds.push({ x: p.x + rand(-40, 40), y: p.y + rand(-40, 40), tickT: 0, phase: rand(TAU) });
+          }
+          S.birds.length = st.count;
+          for (const b of S.birds) {
+            let tgt = null, bd = 420;
+            for (const e of this.enemies) {
+              if (e.state.hidden) continue;
+              const d = dist(b.x, b.y, e.x, e.y);
+              if (d < bd) { bd = d; tgt = e; }
+            }
+            if (tgt) {
+              const [dx, dy] = norm(tgt.x - b.x, tgt.y - b.y);
+              b.x += dx * st.speed * dt;
+              b.y += dy * st.speed * dt;
+              b.tickT -= dt;
+              if (bd < tgt.r + 12 && b.tickT <= 0) {
+                b.tickT = st.tick;
+                this.applyHit(tgt, st.dmg, w.def.tags, {});
+              }
+            } else { // sin objetivo: revolotean cerca del jugador
+              const a = this.time * 1.5 + b.phase;
+              const hx = p.x + Math.cos(a) * 55, hy = p.y + Math.sin(a) * 55;
+              const [dx, dy] = norm(hx - b.x, hy - b.y);
+              b.x += dx * st.speed * 0.8 * dt;
+              b.y += dy * st.speed * 0.8 * dt;
+            }
+          }
+          break;
+        }
         case "orbit": {
           S.angle += st.rot * dt;
           for (let i = 0; i < st.count; i++) {
@@ -394,8 +547,10 @@ export class Game {
       enemyStatuses: new Set(Object.keys(enemy.statuses)),
     };
     const res = this.rules.resolve(ctx);
-    const dmg = baseDmg * this.player.dmgMult * res.mult * (enemy.boss ? 1 : 1);
+    const dmg = baseDmg * this.player.dmgMult * res.mult;
     enemy.hp -= dmg;
+    enemy.flashT = 0.09;
+    if (this.time - this._sfxT > 0.07) { this._sfxT = this.time; sfx.hit(); }
     const knock = Math.max(opts.baseKnock || 0, res.knockback) * (enemy.boss ? 0.1 : enemy.def.behavior === "wall" ? 0.25 : 1);
     if (knock > 0 && opts.dir) {
       enemy.kx = (enemy.kx || 0) + opts.dir[0] * knock;
@@ -427,6 +582,13 @@ export class Game {
     if (e.say) { e.say = null; this.bubbles = Math.max(0, this.bubbles - 1); }
     const p = this.player;
     p.kills++;
+    // racha de bajas: dispersar tópicos en cadena tiene premio
+    this.streak++;
+    this.streakT = 2.5;
+    if (this.streak > 0 && this.streak % 15 === 0) {
+      this.floaters.push({ x: e.x, y: e.y - 30, text: `¡RATXA x${this.streak}!`, t: 1.3, color: "#ffd76b", vy: -40, big: true });
+      this.pickups.push({ x: e.x, y: e.y, type: "coin", val: 3, emoji: "🪙" });
+    }
     const xpMul = this.turbo ? 3 : 1;
     this.pickups.push({ x: e.x + rand(-6, 6), y: e.y + rand(-6, 6), type: "xp", val: e.def.xp * xpMul, emoji: "🎫" });
     if (chance(0.13)) this.pickups.push({ x: e.x + rand(-12, 12), y: e.y + rand(-12, 12), type: "coin", val: randInt(1, 3), emoji: "🪙" });
@@ -437,6 +599,7 @@ export class Game {
       this.boss = null;
       this.over = true;
       this.result = { victory: true };
+      sfx.victory();
       this.cb.gameOver(this.buildResult());
     }
     // la cola del free tour se desorienta si cae el guía
@@ -454,6 +617,11 @@ export class Game {
       def, x, y, r: def.r, hp: def.hp, maxHp: def.hp,
       statuses: {}, state: {}, kx: 0, ky: 0,
       attackCd: rand(0, 0.4), sayT: rand(4, 14), elite,
+      // aspecto: tono de piel/pelo al azar de una paleta diversa (así es la
+      // ciudad); el spec puede fijarlo (mimo pintado, guiri gamba...)
+      skin: def.sprite?.skin || pick(SKIN_TONES),
+      hairTone: pick(HAIR_TONES),
+      phase: rand(TAU), face: chance(0.5) ? 1 : -1, flashT: 0,
     };
     if (elite) {
       e.hp = e.maxHp = def.hp * 3.5;
@@ -477,8 +645,15 @@ export class Game {
         const f = this.spawnEnemy(id, head.x + rand(-20, 20), head.y + rand(-20, 20), false);
         f.state.leader = prev;
         f.follower = true;
+        f.spriteOverride = def.spriteFollower;
         f.hp = f.maxHp = f.hp * 0.6;
         prev = f;
+      }
+      return;
+    }
+    if (def.behavior === "pack") { // la banda llega junta, como debe ser
+      for (let i = 0; i < def.special.packSize; i++) {
+        this.spawnEnemy(id, p.x + Math.cos(a) * d + rand(-35, 35), p.y + Math.sin(a) * d + rand(-35, 35), elite && i === 0);
       }
       return;
     }
@@ -495,11 +670,14 @@ export class Game {
   }
 
   enemySpeed(e) {
-    let s = e.def.speed;
+    let s = e.def.speed * this.globalEnemySpeed;
     if (e.statuses.empapado) s *= STATUS_INFO.empapado.slow;
     if (e.statuses.aturdido) return 0;
     if (e._spdBuff) s *= e._spdBuff;
     if (this.onSlowPatch(e.x, e.y)) s *= 0.75;
+    for (const z of this.zones) { // cristales de litrona: nadie pisa fuerte
+      if (z.type === "cristales" && z.telegraph <= 0 && dist(e.x, e.y, z.x, z.y) < z.r) { s *= 0.55; break; }
+    }
     return s;
   }
 
@@ -517,6 +695,15 @@ export class Game {
           e._spdBuff = sp.speedBuff;
           e._dmgBuff = sp.dmgBuff;
         }
+      }
+    }
+
+    // ¿hay una banda del altavoz cerca? El bajo te ralentiza (updatePlayer)
+    this.bassSlow = false;
+    for (const e of this.enemies) {
+      if (e.def.behavior === "pack" && !e.dead && dist(p.x, p.y, e.x, e.y) < (e.def.special.bassR || 110)) {
+        this.bassSlow = true;
+        break;
       }
     }
 
@@ -542,6 +729,7 @@ export class Game {
 
     for (const e of this.enemies) {
       if (e.dead) continue;
+      e.flashT = Math.max(0, (e.flashT || 0) - dt);
 
       // estados
       for (const id of Object.keys(e.statuses)) {
@@ -600,7 +788,7 @@ export class Game {
           }
       }
 
-      this.collideObstacles(e);
+      if (e.def.behavior !== "flyer") this.collideObstacles(e); // las gaviotas vuelan
 
       // contacto con el jugador
       e.attackCd -= dt;
@@ -709,7 +897,7 @@ export class Game {
           this.eProjectiles.push({
             x: e.x, y: e.y, vx: dx * sp.projSpeed, vy: dy * sp.projSpeed,
             dmg: e.def.dmg * (e._dmgBuff || 1), r: 8, emoji: sp.projEmoji, ttl: 4,
-            homing: sp.homing, boomerang: sp.boomerang, t: 0, home: { x: e.x, y: e.y },
+            homing: sp.homing, boomerang: sp.boomerang, slows: sp.slows, t: 0, home: { x: e.x, y: e.y },
           });
         }
         break;
@@ -849,6 +1037,68 @@ export class Game {
         break;
       }
 
+      case "pack": { // la banda: cohesión de grupo + perreo intimidatorio
+        let cx = 0, cy = 0, n = 0;
+        for (const o of this.enemies) {
+          if (o.def.id !== e.def.id || o.dead) continue;
+          if (dist(e.x, e.y, o.x, o.y) < 140) { cx += o.x; cy += o.y; n++; }
+        }
+        this.steer(e, p.x, p.y, spd, dt);
+        if (n > 1) this.steer(e, cx / n, cy / n, spd * 0.4, dt); // no se separan del altavoz
+        break;
+      }
+
+      case "puller": { // promotor: su lista VIP es un agujero gravitacional
+        if (dp > sp.pullRange * 0.9) this.steer(e, p.x, p.y, spd, dt);
+        else if (dp < 90) this.steer(e, p.x, p.y, -spd * 0.8, dt);
+        if (dp < sp.pullRange && p.immobT <= 0 && p.stunT <= 0) {
+          const [dx, dy] = norm(e.x - p.x, e.y - p.y);
+          p.x += dx * sp.pullForce * dt;
+          p.y += dy * sp.pullForce * dt;
+          S.vipT = (S.vipT ?? 0) - dt;
+          if (S.vipT <= 0) {
+            S.vipT = sp.pullCd;
+            this.floaters.push({ x: e.x, y: e.y - e.r - 14, text: "¡LISTA VIP, BRO!", t: 1, color: "#c98cff", vy: -35, big: true });
+          }
+        }
+        break;
+      }
+
+      case "flyer": { // gaviota: vuela sobre todo y roba tickets
+        S.mode = S.mode || "circle";
+        if (S.mode === "circle") {
+          S.orbA = (S.orbA ?? rand(TAU)) + dt * 1.4;
+          const tx = p.x + Math.cos(S.orbA) * sp.circleR;
+          const ty = p.y + Math.sin(S.orbA) * sp.circleR;
+          this.steer(e, tx, ty, spd, dt);
+          S.swoopT = (S.swoopT ?? rand(1, sp.swoopCd)) - dt;
+          if (S.swoopT <= 0) {
+            S.mode = "swoop";
+            S.swoopT = sp.swoopCd;
+            S.dir = norm(p.x - e.x, p.y - e.y);
+            S.dist = 0;
+            S.stole = false;
+          }
+        } else {
+          const step = sp.swoopSpeed * dt;
+          e.x += S.dir[0] * step;
+          e.y += S.dir[1] * step;
+          S.dist += step;
+          if (!S.stole) { // al pasar, te roba un ticket del suelo
+            for (const pk of this.pickups) {
+              if (pk.type === "xp" && !pk.taken && dist(e.x, e.y, pk.x, pk.y) < 26) {
+                pk.taken = true;
+                S.stole = true;
+                this.floaters.push({ x: e.x, y: e.y - 26, text: "¡SKRAAA! 🎫", t: 1, color: "#fff", vy: -45, big: true });
+                break;
+              }
+            }
+          }
+          if (S.dist > sp.circleR * 2.4) S.mode = "circle";
+        }
+        break;
+      }
+
       default:
         this.steer(e, p.x, p.y, spd, dt);
     }
@@ -865,12 +1115,15 @@ export class Game {
       r: def.r, hp: def.hp, maxHp: def.hp,
       statuses: {}, state: { atkT: 2 }, kx: 0, ky: 0,
       attackCd: 0, sayT: 0.5, boss: true, ai: def.ai,
+      skin: def.sprite?.skin || pick(SKIN_TONES), hairTone: pick(HAIR_TONES),
+      phase: rand(TAU), face: 1, flashT: 0,
     };
     if (this.turbo) { e.hp = e.maxHp = def.hp * 0.35; }
     this.enemies.push(e);
     this.boss = e;
     this.bossSpawned = true;
     this.cb.toast(`⚠️ ${def.name} ⚠️`);
+    sfx.boss();
     this.shake = 10;
   }
 
@@ -1032,18 +1285,47 @@ export class Game {
         pr.y = pr.y0 + (pr.y1 - pr.y0) * k - Math.sin(k * Math.PI) * 60;
         if (k >= 1) {
           pr.ttl = 0;
-          this.effects.push({ type: "boom", x: pr.x1, y: pr.y1, r: pr.radius, t: 0.4, dur: 0.4 });
+          this.effects.push({ type: "boom", x: pr.x1, y: pr.y1, r: pr.radius, t: 0.4, dur: 0.4, glass: pr.bottle });
           this.shake = 4;
+          sfx.boom();
           for (const e of this.enemies) {
             if (dist(pr.x1, pr.y1, e.x, e.y) < pr.radius + e.r) {
-              this.applyHit(e, pr.dmg, pr.tags, { dir: norm(e.x - pr.x1, e.y - pr.y1), baseKnock: 140 });
+              this.applyHit(e, pr.dmg, pr.tags, {
+                dir: norm(e.x - pr.x1, e.y - pr.y1), baseKnock: 140,
+                forceStatus: pr.bottle ? [{ id: "empapado", dur: 4 }] : undefined,
+              });
             }
           }
-          this.zones.push({
-            x: pr.x1, y: pr.y1, r: pr.radius * 0.85, type: "salsa",
-            t: pr.dotDur, telegraph: 0, owner: "player",
-            dotDmg: pr.dotDmg, tags: ["picante"], tickT: 0,
-          });
+          this.zones.push(pr.bottle
+            ? { x: pr.x1, y: pr.y1, r: pr.radius * 0.9, type: "cristales", t: pr.zoneDur, telegraph: 0, owner: "player" }
+            : {
+              x: pr.x1, y: pr.y1, r: pr.radius * 0.85, type: "salsa",
+              t: pr.dotDur, telegraph: 0, owner: "player",
+              dotDmg: pr.dotDmg, tags: ["picante"], tickT: 0,
+            });
+        }
+        continue;
+      }
+      if (pr.homingPlayer) { // la chancla persigue hasta el final
+        if (!pr.target || pr.target.dead) {
+          let bd = 500; pr.target = null;
+          for (const e of this.enemies) {
+            const d = dist(pr.x, pr.y, e.x, e.y);
+            if (d < bd && !e.state.hidden) { bd = d; pr.target = e; }
+          }
+          if (!pr.target) { pr.ttl = 0; continue; }
+        }
+        const [dx, dy] = norm(pr.target.x - pr.x, pr.target.y - pr.y);
+        pr.vx += dx * 900 * dt;
+        pr.vy += dy * 900 * dt;
+        const [nx, ny] = norm(pr.vx, pr.vy);
+        pr.vx = nx * pr.speed; pr.vy = ny * pr.speed;
+        pr.rot += dt * 14;
+        pr.x += pr.vx * dt;
+        pr.y += pr.vy * dt;
+        if (dist(pr.x, pr.y, pr.target.x, pr.target.y) < pr.target.r + 10) {
+          this.applyHit(pr.target, pr.dmg, pr.tags, { dir: [nx, ny], baseKnock: 100 });
+          pr.ttl = 0;
         }
         continue;
       }
@@ -1091,6 +1373,7 @@ export class Game {
       pr.y += pr.vy * dt;
       if (dist(p.x, p.y, pr.x, pr.y) < p.r + pr.r) {
         this.hurtPlayer(pr.dmg, "proyectil");
+        if (pr.slows) p.stickT = 1.4; // flyer de kebab pegado al zapato
         pr.ttl = 0;
       }
     }
@@ -1148,9 +1431,12 @@ export class Game {
       }
       if (d < p.r + 10) {
         pk.taken = true;
-        if (pk.type === "xp") this.gainXp(pk.val);
-        else if (pk.type === "coin") {
-          p.coins += pk.val;
+        if (pk.type === "xp") {
+          this.gainXp(pk.val);
+          if (this.time - (this._pickT || 0) > 0.09) { this._pickT = this.time; sfx.pickup(); }
+        } else if (pk.type === "coin") {
+          p.coins += Math.round(pk.val * this.coinMult);
+          sfx.coin();
         } else if (pk.type === "heal") {
           p.hp = Math.min(p.maxHp, p.hp + pk.val);
           this.floaters.push({ x: p.x, y: p.y - 24, text: `+${pk.val} 🍅`, t: 0.9, color: "#7dde8b", vy: -45 });
@@ -1198,7 +1484,7 @@ export class Game {
         });
       }
     }
-    if (p.weapons.length < MAX_WEAPON_SLOTS) {
+    if (p.weapons.length < this.maxWeaponSlots) {
       for (const id of Object.keys(WEAPONS)) {
         if (owned.has(id)) continue;
         const def = WEAPONS[id];
@@ -1244,6 +1530,7 @@ export class Game {
     } else if (c.kind === "synergy") {
       p.synergiesTaken.add(c.synergy.id);
       this.rules.add(c.synergy.rule); // ¡regla nueva en caliente!
+      sfx.synergy();
       this.cb.toast(`✨ Nueva regla de combate: ${c.synergy.name}`);
     }
   }
@@ -1255,7 +1542,7 @@ export class Game {
     this.spawnT -= dt;
     if (this.spawnT > 0) return;
     const t = this.time * (this.turbo ? 6 : 1);
-    this.spawnT = Math.max(0.35, 1.5 - t * 0.0018);
+    this.spawnT = Math.max(0.35, 1.5 - t * 0.0018) / this.spawnRateMult;
     const maxEnemies = Math.min(220, 25 + t * 0.45) * (this.boss ? 0.6 : 1);
     if (this.enemies.length >= maxEnemies) return;
 
@@ -1263,7 +1550,7 @@ export class Game {
     const batch = 1 + Math.floor(t / 75);
     for (let i = 0; i < batch; i++) {
       const s = weightedPick(avail, (x) => x.w);
-      const elite = t > 300 && chance(0.08);
+      const elite = t > this.eliteFrom && chance(0.08 * this.eliteChanceMult);
       this.spawnAtRing(s.id, elite);
     }
   }
@@ -1280,6 +1567,8 @@ export class Game {
 
   // ------------------------------------------------------------ flotantes
   updateFloaters(dt) {
+    this.streakT -= dt;
+    if (this.streakT <= 0) this.streak = 0;
     for (const f of this.floaters) {
       f.t -= dt;
       f.y += (f.vy || -50) * dt;

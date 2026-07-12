@@ -71,6 +71,30 @@ export const BASE_RULES = [
     then: { addStatus: [{ id: "aturdido", dur: 0.8 }] },
     desc: "Empapado + cegado a la vez → resbala y queda aturdido.",
   },
+  {
+    id: "la-chancla",
+    when: { weapon: ["maternal"], enemy: { tags: ["joven"] } },
+    then: { damageMult: 2.5, banner: "¡LA CHANCLA! x2,5" },
+    desc: "La chancla contra la juventud → x2,5. Autoridad ancestral.",
+  },
+  {
+    id: "guerra-de-altavoces",
+    when: { weapon: ["sonido"], enemy: { tags: ["reggaeton"] } },
+    then: { damageMult: 2, addStatus: [{ id: "aturdido", dur: 0.6 }], banner: "¡GUERRA DE ALTAVOCES! x2" },
+    desc: "Sonido contra la banda del altavoz → x2 y los deja sin bajo.",
+  },
+  {
+    id: "persianazo-nocturno",
+    when: { weapon: ["acero"], enemy: { tags: ["nocturno"] } },
+    then: { damageMult: 1.75, banner: "¡CERRAMOS! x1,75" },
+    desc: "El persianazo contra la fauna nocturna → x1,75. Hora de cerrar.",
+  },
+  {
+    id: "opinion-imparable",
+    when: { weapon: ["comida"], enemy: { tags: ["fauna"] } },
+    then: { damageMult: 0.5, banner: "¡LE ESTÁS DANDO DE COMER!" },
+    desc: "Comida contra gaviotas → x0,5. Le estás dando de comer, genio.",
+  },
 ];
 
 export class RuleEngine {

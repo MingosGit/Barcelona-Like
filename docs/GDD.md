@@ -22,6 +22,8 @@ cubo de sangría y muy mala leche.
 
 - **Motor:** HTML5 Canvas + JavaScript (ES modules), sin dependencias ni build. Elegido para el prototipo por: portabilidad móvil inmediata, iteración instantánea y facilidad de empaquetar después (Capacitor/Cordova para stores). El diseño de datos es agnóstico: migrable a Godot/Unity conservando los JSON de enemigos/armas/reglas.
 - **Arquitectura de combate:** **reglas declarativas con pattern matching** (`src/rules.js`). Toda interacción arma→enemigo se resuelve contra una lista de reglas-dato. Añadir un enemigo, un arma o una sinergia = añadir datos, sin tocar el core loop.
+- **Arte:** sprites cartoon **dibujados proceduralmente en canvas** (`src/sprites.js`, `src/props.js`), cero assets binarios. Cada personaje es un spec declarativo (ropa, capucha, bandana, cara, vehículo); el mobiliario urbano (tiendas con toldo y rótulo, kioscos, farolas con luz real de noche) da identidad a cada barrio junto a los suelos temáticos (panot de flor, mosaico de Miró, adoquines, arena). El tono de piel de todo humanoide se sortea de una paleta diversa — jamás se codifica por arquetipo.
+- **Audio:** SFX procedurales WebAudio (`src/sfx.js`), sin ficheros.
 
 ```js
 // Ejemplo real del motor (src/rules.js):
@@ -46,10 +48,17 @@ cubo de sangría y muy mala leche.
 | `src/data/biomes.js` | 6 barrios + 6 jefes |
 | `src/data/cards.js` | Pasivas y sinergias (cartas de mejora) |
 | `src/data/characters.js` | Personajes desbloqueables |
+| `src/data/mods.js` | Modificadores de dificultad |
 | `src/game.js` | Core loop: IA, armas, jefes, director de oleadas |
-| `src/render.js` | Render canvas (estética emoji-cartoon) |
+| `src/sprites.js` | Sprites cartoon procedurales (humanoides, vehículos, jefes) |
+| `src/props.js` | Mobiliario urbano (tiendas, kioscos, farolas, sombrillas...) |
+| `src/render.js` | Render canvas: suelos temáticos, luces, juice |
+| `src/sfx.js` | Efectos de sonido WebAudio procedurales |
+| `src/ads.js` | Integración Google AdSense (raíles + banner) |
+| `src/cloud.js` | Guardado en Google Drive appData + códigos de guardado |
 | `src/meta.js` | Meta-progresión persistente (localStorage) |
 | `src/main.js` | Menús, HUD, bucle |
+| `config.js` | IDs de AdSense y OAuth de Google (producción) |
 
 ## 3. Escenarios (biomas)
 
@@ -89,6 +98,17 @@ caster, ambush, stabber, rider, wall, buffer`.
 | **Manifestante con estelada** 🎗️ | skirmisher | Banderas **boomerang**; corta calles con eficiencia logística |
 | **Nostálgico de bandera al hombro** 🦅 | wall | Falange lenta, compacta y resistente al knockback: no se mueve de sus ideas ni de tu camino |
 | **Gentrificador de flat white** ☕ | buffer | Casi no pega: su aura "sube el precio" del área (los enemigos cercanos van más rápido y pegan más) |
+| **La banda del altavoz** 🔊 | pack | Grupo cohesionado alrededor de un altavoz-nevera; el bajo del reggaeton te ralentiza físicamente |
+| **El de "dame todo"** 🔪 | stabber | Ratero premium: más rápido, roba más cèntims, "algo brilla en su mano". Trabaja L3 y L4 |
+| **Ciclista de Strava** 🚴 | charger | Embestida a 460 px/s gritando ¡CARRIL!; no frena, el KOM no se baja solo |
+| **Señora del carrito** 🛒 | charger | Tanque de barrio con ariete de cuadros escoceses; casi inmune al knockback, ella estaba primero |
+| **Promotor de discoteca** 🎫 | puller | No pega: te ARRASTRA hacia su lista VIP como un agujero gravitacional |
+| **Trilero de la Rambla** 🎩 | ambush | Camuflado tras su caja; la bolita no existe y nunca existió |
+| **Gaviota del Port Vell** 🕊️ | flyer | Vuela sobre los obstáculos, hace pasadas en picado y **te roba los tickets de XP del suelo** |
+| **Turista de crucero** 🛳️ | swarm | Marabunta lenta, ancha y tanque, con 45 minutos para "hacer" Barcelona |
+| **Camarero de terraza trampa** 🧾 | skirmisher | Cuentas infladas teledirigidas ("son 27,50; el pan se cobra") |
+| **Dependiente de fundas** 📱 | skirmisher | Lanza carcasas; su tienda lleva 9 años "de liquidación" |
+| **Repartidor de flyers de kebab** 🥙 | skirmisher | Sus flyers 2x1 se te pegan a los pies y te frenan |
 
 > **Nota de tono:** la sátira política reparte a ambos lados (estelada y
 > bandera al hombro reciben por igual), y los arquetipos de economía
@@ -121,8 +141,13 @@ A partir del minuto 5, un 8 % de spawns son **élite** (👑): ×3,5 vida,
 | **Silbato de Guàrdia Urbana** 📯 | Nova radial con knockback | A la venta ambulante: huyen despavoridos (miedo) |
 | **Patata brava explosiva** 🥔 | Bomba AoE + charco de salsa (DoT picante) | A los guiris: "too spicy" x2 |
 | **Paraguas de guía turístico** 🌂 | Escudos orbitales que aturden | Defensa; la ironía (es robado a un free tour) hace daño moral |
+| **La Chancla Teledirigida** 🩴 | Proyectil que persigue al objetivo por toda la ciudad | A la juventud: x2,5, autoridad ancestral |
+| **Litrona de recena** 🍾 | Se estrella: empapa + charco de cristales que frena | Combustible premium del Clipper (¡FLAMBEADO!) |
+| **Dürüm de las 4 AM** 🌯 | Su olor ATRAE enemigos y la salsa dudosa los funde (DoT) | Alto riesgo/recompensa; sinergia con área |
+| **Persiana metálica** 🔩 | PERSIANAZO frontal: aturde + knockback masivo | A la fauna nocturna: x1,75, "cerramos" |
+| **Escuadrón de palomas** 🕊️ | Mascotas que acosan al enemigo más cercano | Daño constante; contra gaviotas x0,5 (les das de comer, genio) |
 
-Todas con 5 niveles. Máximo 5 armas simultáneas.
+Todas con 5 niveles. Máximo 5 armas simultáneas (3 con el modificador "Piso compartido").
 
 ### Reglas de combate base (pattern matching)
 
@@ -131,8 +156,12 @@ fuego      + empapado            → daño x3 + ardiendo      "¡FLAMBEADO!"
 area       + enjambre            → knockback masivo
 luz        + postureo            → x2 + cegado             "¡SU PROPIA MEDICINA!"
 sonido     + callejero           → x1,5 + miedo            "¡LA URBANA!"
+sonido     + reggaeton           → x2 + aturdido           "¡GUERRA DE ALTAVOCES!"
 choque     + vehiculo            → x2 + knockback          "¡CARRIL BICI!"
 picante    + guiri               → x2                      "¡TOO SPICY!"
+maternal   + joven               → x2,5                    "¡LA CHANCLA!"
+acero      + nocturno            → x1,75                   "¡CERRAMOS!"
+comida     + fauna               → x0,5                    "¡LE ESTÁS DANDO DE COMER!"
 fuego      + papel               → x2 + ardiendo
 empapado   + cegado (estados)    → resbala: aturdido
 ```
@@ -167,15 +196,39 @@ Al subir de nivel: elige 1 de 3 cartas —
 La XP son **tickets de metro T-Casual** 🎫; la vida se recupera con
 **pa amb tomàquet** 🍅.
 
+### Modificadores de dificultad (mutadores)
+Acumulables antes de la partida; cada uno multiplica los cèntims ganados:
+
+| Modificador | Efecto | Cèntims |
+|---|---|---|
+| 🧳 Temporada alta | +60 % spawns | ×1,25 |
+| 🥵 Ola de calor | Tú −12 % velocidad, ellos +10 % | ×1,2 |
+| 🚇 Huelga de metro | −50 % de radio de imán de XP | ×1,2 |
+| 🎆 Festes de la Mercè | Triple de élites 👑 y llegan antes | ×1,3 |
+| 🔑 Alquiler al día | Pierdes 1 vida/segundo, siempre | ×1,5 |
+| 🚪 Piso compartido | Máximo 3 armas | ×1,35 |
+
 ### Meta-progresión (entre partidas)
-- Moneda: **cèntims** 🪙 (los rateros te los ROBAN durante la partida).
+- Moneda: **cèntims** 🪙 (los rateros y el de "dame todo" te los ROBAN durante la partida).
 - **Personajes desbloqueables:**
   - 😤 *Superviviente de barrio* (inicial) — equilibrado, empieza con Clipper
   - 🧢 *Turista arrepentido* (400 c) — rápido y frágil, empieza con Paraguas
   - 🧑‍🍳 *Camarero veterano* (800 c) — +20 % daño, empieza con Bocata
   - 👵 *Vecina histórica* (1200 c) — tanque con regeneración, empieza con Silbato
+  - 🛹 *Skater del MACBA* (1600 c) — velocísimo y frágil, empieza con Litrona
+  - ⛵ *Pijo de Pedralbes* (2500 c) — +30 % cèntims, empieza con la Chancla de su yaya
 - **Barrios:** se desbloquean venciendo al jefe del anterior.
-- Persistencia en `localStorage` (portable a cloud save).
+- **Persistencia:** `localStorage` + opcional **cuenta de Google del jugador**
+  (Drive appData vía OAuth, sin backend propio) + código de guardado
+  exportable/importable como fallback universal.
+
+### Monetización
+- **Google AdSense** integrado: dos raíles laterales (solo escritorio, fuera
+  del área táctil) y un banner inferior. IDs en `config.js`; sin configurar,
+  huecos con placeholder. El diseño reserva el espacio desde el día 1 para no
+  recolocar la UI al activar los anuncios.
+- Futuro: rewarded ads opcionales ("ver un anuncio = revivir una vez"),
+  cosméticos. Nunca pay-to-win: esto va de sufrir la ciudad, no de pagarla.
 
 ## 9. Tono y límites de diseño (contrato creativo)
 

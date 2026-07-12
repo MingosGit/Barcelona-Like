@@ -102,6 +102,66 @@ export const WEAPONS = {
       { dmg: 17, count: 4, radius: 98, rot: 3.6, stun: 0.6 },
     ],
   },
+  chancla: {
+    id: "chancla", name: "La Chancla Teledirigida", emoji: "🩴", kind: "homing",
+    tags: ["proyectil", "maternal"],
+    desc: "Proyectil que persigue al objetivo por toda la ciudad. Tecnología materna: no falla nunca, duele para siempre.",
+    levels: [
+      { dmg: 16, cd: 2.6, speed: 260, count: 1 },
+      { dmg: 20, cd: 2.4, speed: 280, count: 1 },
+      { dmg: 25, cd: 2.2, speed: 300, count: 2 },
+      { dmg: 31, cd: 2.0, speed: 320, count: 2 },
+      { dmg: 40, cd: 1.7, speed: 350, count: 3 },
+    ],
+  },
+  litrona: {
+    id: "litrona", name: "Litrona de recena", emoji: "🍾", kind: "bottle",
+    tags: ["area", "liquido", "vidrio"],
+    desc: "Se estrella, empapa a todos y deja un charco de cristales que frena. Combustible premium para el Clipper.",
+    levels: [
+      { dmg: 10, cd: 3.2, radius: 75, zoneDur: 3.5 },
+      { dmg: 13, cd: 3.0, radius: 85, zoneDur: 4 },
+      { dmg: 17, cd: 2.7, radius: 95, zoneDur: 4.5 },
+      { dmg: 22, cd: 2.4, radius: 105, zoneDur: 5 },
+      { dmg: 28, cd: 2.0, radius: 120, zoneDur: 5.5 },
+    ],
+  },
+  kebab: {
+    id: "kebab", name: "Dürüm de las 4 AM", emoji: "🌯", kind: "taunt",
+    tags: ["comida", "picante", "area"],
+    desc: "Su olor ATRAE a los enemigos hacia ti y la salsa de dudosa procedencia los va fundiendo. Alto riesgo, alta recompensa.",
+    levels: [
+      { dmg: 3, tick: 0.6, radius: 95, pull: 40 },
+      { dmg: 4, tick: 0.55, radius: 105, pull: 46 },
+      { dmg: 6, tick: 0.5, radius: 115, pull: 52 },
+      { dmg: 8, tick: 0.45, radius: 128, pull: 58 },
+      { dmg: 10, tick: 0.4, radius: 145, pull: 66 },
+    ],
+  },
+  persiana: {
+    id: "persiana", name: "Persiana metálica", emoji: "🔩", kind: "slam",
+    tags: ["choque", "acero", "area"],
+    desc: "El PERSIANAZO de cierre: golpe frontal que aturde y empuja. El sonido que dispersa cualquier tribu urbana a las 2 AM.",
+    levels: [
+      { dmg: 14, cd: 3.0, range: 95, width: 90, stun: 0.8 },
+      { dmg: 18, cd: 2.8, range: 105, width: 100, stun: 0.9 },
+      { dmg: 24, cd: 2.5, range: 115, width: 112, stun: 1.0 },
+      { dmg: 30, cd: 2.2, range: 128, width: 124, stun: 1.1 },
+      { dmg: 40, cd: 1.9, range: 145, width: 140, stun: 1.3 },
+    ],
+  },
+  palomas: {
+    id: "palomas", name: "Escuadrón de palomas", emoji: "🕊️", kind: "pets",
+    tags: ["fauna"],
+    desc: "Palomas de plaza Catalunya adiestradas(?) que acosan al enemigo más cercano. Veteranas de mil bodas y mil bocatas.",
+    levels: [
+      { dmg: 3, count: 2, tick: 0.5, speed: 220 },
+      { dmg: 4, count: 3, tick: 0.45, speed: 240 },
+      { dmg: 5, count: 3, tick: 0.42, speed: 260 },
+      { dmg: 6, count: 4, tick: 0.38, speed: 280 },
+      { dmg: 8, count: 5, tick: 0.34, speed: 300 },
+    ],
+  },
 };
 
 export const MAX_WEAPON_LEVEL = 5;

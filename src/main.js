@@ -7,8 +7,12 @@ import { render } from "./render.js";
 import { BIOMES, BOSSES } from "./data/biomes.js";
 import { CHARACTERS } from "./data/characters.js";
 import { DEATH_QUOTES } from "./data/enemies.js";
+import { MODS } from "./data/mods.js";
 import { loadMeta, saveMeta } from "./meta.js";
 import { formatTime } from "./util.js";
+import { initAds } from "./ads.js";
+import { sfx, setMuted, isMuted } from "./sfx.js";
+import { cloudAvailable, cloudSync, cloudPush, exportSaveCode, importSaveCode } from "./cloud.js";
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("game");
@@ -23,6 +27,7 @@ let inLevelUp = false;
 let lastT = 0;
 let selChar = meta.unlockedChars[0] || "superviviente";
 let selBiome = meta.unlockedBiomes[0] || "ramblas";
+let selMods = new Set();
 
 // ------------------------------------------------------------ canvas
 function resize() {
@@ -102,13 +107,36 @@ function buildMenu() {
     };
     br.appendChild(div);
   }
+
+  // modificadores de dificultad
+  const mr = $("modrow");
+  mr.innerHTML = "";
+  for (const m of MODS) {
+    const chip = document.createElement("div");
+    chip.className = "modchip" + (selMods.has(m.id) ? " on" : "");
+    chip.innerHTML = `${m.emoji} ${m.name} <span class="mult">×${m.coinMult}</span>`;
+    chip.title = m.desc;
+    chip.onclick = () => {
+      selMods.has(m.id) ? selMods.delete(m.id) : selMods.add(m.id);
+      buildMenu();
+    };
+    mr.appendChild(chip);
+  }
+  const active = MODS.filter((m) => selMods.has(m.id));
+  const totalMult = active.reduce((acc, m) => acc * m.coinMult, 1);
+  $("modhint").textContent = active.length
+    ? `${active.map((m) => m.desc).join(" · ")} — cèntims ×${totalMult.toFixed(2)}`
+    : "Sin modificadores: la ciudad ya es suficientemente hostil.";
+
+  $("mutebtn").textContent = isMuted() ? "🔇 Sonido OFF" : "🔊 Sonido";
 }
 
 // ------------------------------------------------------------ partida
 function startRun() {
   const biome = BIOMES.find((b) => b.id === selBiome);
   const charDef = CHARACTERS.find((c) => c.id === selChar);
-  game = new Game(input, biome, charDef, { levelUp: onLevelUp, gameOver: onGameOver, toast, flash }, { turbo: TURBO });
+  const mods = MODS.filter((m) => selMods.has(m.id));
+  game = new Game(input, biome, charDef, { levelUp: onLevelUp, gameOver: onGameOver, toast, flash }, { turbo: TURBO, mods });
   window.__game = game; // depuración / tests automatizados
   paused = false;
   inLevelUp = false;
@@ -138,6 +166,7 @@ function quitToMenu() {
 // ------------------------------------------------------------ subida de nivel
 function onLevelUp() {
   inLevelUp = true;
+  sfx.levelup();
   const row = $("uprow");
   row.innerHTML = "";
   const subs = [
@@ -183,7 +212,9 @@ function onGameOver(res) {
       toast(`🗺️ Nuevo barrio desbloqueado: ${next.name}`);
     }
   }
+  meta.savedAt = Date.now();
   saveMeta(meta);
+  cloudPush(); // si hay sesión de Google, sube el progreso
 
   const t = $("goTitle");
   if (res.victory) {
@@ -266,5 +297,45 @@ function loop(t) {
   render(game, ctx, window.innerWidth, window.innerHeight);
 }
 
+// ------------------------------------------------------------ ajustes y guardado
+$("mutebtn").onclick = () => { setMuted(!isMuted()); buildMenu(); };
+
+$("googlebtn").onclick = async () => {
+  if (!cloudAvailable()) {
+    toast("Configura googleClientId en config.js para activar el guardado en Google");
+    return;
+  }
+  try {
+    await cloudSync(toast);
+    meta = loadMeta();
+    buildMenu();
+  } catch (e) {
+    toast("No se pudo conectar con Google: " + (e?.message || e));
+  }
+};
+
+$("exportbtn").onclick = async () => {
+  const code = exportSaveCode();
+  try {
+    await navigator.clipboard.writeText(code);
+    toast("📋 Código de guardado copiado al portapapeles");
+  } catch {
+    prompt("Copia tu código de guardado:", code);
+  }
+};
+
+$("importbtn").onclick = () => {
+  const code = prompt("Pega tu código de guardado (BCN1.…):");
+  if (!code) return;
+  try {
+    meta = importSaveCode(code.trim());
+    buildMenu();
+    toast("✅ Guardado importado");
+  } catch (e) {
+    toast("❌ " + (e?.message || "Código no válido"));
+  }
+};
+
+initAds();
 buildMenu();
 requestAnimationFrame(loop);
