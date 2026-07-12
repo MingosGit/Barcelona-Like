@@ -1,0 +1,173 @@
+// ---------------------------------------------------------------------------
+// ROSTER DE ENEMIGOS — arquetipos urbanos satíricos.
+// Regla de tono: nos reímos de COMPORTAMIENTOS y clichés, jamás de origen,
+// etnia o rasgos protegidos. Todo el mundo recibe por igual.
+//
+// Campos:
+//   behavior: clave de la IA en game.js (swarm, drunk, flasher, skirmisher,
+//             charger, conga, caster, ambush, stabber, rider, wall, buffer)
+//   tags:     usadas por el motor de reglas (rules.js)
+//   quotes:   bocadillos de texto que sueltan de vez en cuando
+// ---------------------------------------------------------------------------
+
+export const ENEMIES = {
+  cigarro: {
+    id: "cigarro", name: '"¿Tienes un cigarro?"', emoji: "🚬",
+    hp: 8, speed: 62, dmg: 4, r: 12, xp: 1, behavior: "swarm",
+    tags: ["enjambre", "peaton"],
+    special: { surroundCount: 6, surroundDist: 46, stunDur: 0.7 },
+    quotes: ["Amic, un cigarrito...", "¿Un euro aunque sea?", "Tío, no seas así", "¿Y fuego tienes?"],
+    lore: "Enjambre básico. Individualmente inofensivo; en grupo te rodea y te 'pide' hasta aturdirte.",
+  },
+  guiri: {
+    id: "guiri", name: "Guiri de despedida de soltero", emoji: "🍺",
+    hp: 16, speed: 55, dmg: 6, r: 14, xp: 2, behavior: "drunk",
+    tags: ["guiri", "enjambre"],
+    special: { vomitEvery: [4, 8], vomitR: 55, vomitDur: 5 },
+    quotes: ["¡SANGRIA AMIGO!", "One beer plis", "WHERE IS LA RAMBLA", "¡Fiestaaaa!", "Do you speak inglis?"],
+    lore: "Errático, en manada y de peluca rosa. Vomita charcos que ralentizan. Nadie sabe dónde está su hotel. Él tampoco.",
+  },
+  charo: {
+    id: "charo", name: "Charo del postureo", emoji: "🤳",
+    hp: 20, speed: 78, dmg: 5, r: 13, xp: 3, behavior: "flasher",
+    tags: ["postureo", "peaton"],
+    special: { flashRange: 150, windup: 0.8, blindDur: 1.3, flashCd: 5 },
+    quotes: ["¡Para el story!", "Lo subo al grupo", "#blessed #bcn", "Espera que no salgo bien"],
+    lore: "Te persigue con el móvil en alto. Su flash te ciega. Su hashtag te persigue para siempre.",
+  },
+  mantero: {
+    id: "mantero", name: "Vendedor de Rolex de aire", emoji: "⌚",
+    hp: 14, speed: 90, dmg: 5, r: 13, xp: 3, behavior: "skirmisher",
+    tags: ["callejero"],
+    special: { minDist: 170, maxDist: 260, shootCd: 2.4, projSpeed: 210, projEmoji: "⌚" },
+    quotes: ["Rolex bueno bonito", "Veinte euro, para ti quince", "Bolso Gucchi original"],
+    lore: "Mantiene la distancia, huye si te acercas y te lanza relojes 'originales'. Recoge la manta en 0,2 segundos.",
+  },
+  latero: {
+    id: "latero", name: "Latero de las 3 AM", emoji: "🥫",
+    hp: 12, speed: 84, dmg: 4, r: 12, xp: 2, behavior: "skirmisher",
+    tags: ["callejero"],
+    special: { minDist: 120, maxDist: 220, shootCd: 2.0, projSpeed: 240, projEmoji: "🥫" },
+    quotes: ["Cerveza beer un euro", "Agua fresquita", "Birra birra birra"],
+    lore: "Aparece de la nada exactamente cuando no quieres una lata caliente. Puntería olímpica.",
+  },
+  patinete: {
+    id: "patinete", name: "Patinete eléctrico kamikaze", emoji: "🛴",
+    hp: 10, speed: 60, dmg: 18, r: 14, xp: 4, behavior: "charger",
+    tags: ["vehiculo"],
+    special: { chargeRange: 320, windup: 0.65, chargeSpeed: 420, breaksOnHit: true },
+    quotes: ["*no mira*", "Voy por la acera, ¿qué pasa?", "*auriculares puestos*"],
+    lore: "Embiste en línea recta por donde le da igual si es acera, carril o tu tibia. Se rompe al chocar. Nunca frena antes.",
+  },
+  freetour: {
+    id: "freetour", name: "Guía de free tour", emoji: "☂️",
+    hp: 30, speed: 58, dmg: 7, r: 15, xp: 6, behavior: "conga",
+    tags: ["guiri", "grupo"],
+    special: { followers: 6, followerEmoji: "🧢", spacing: 30 },
+    quotes: ["¡Síganme todos!", "Gaudí murió atropellado, fun fact", "La propina es voluntaria*"],
+    lore: "Arrastra una fila de turistas con auriculares. El grupo entero avanza como un solo enemigo larguísimo que corta la calle.",
+  },
+  vecino: {
+    id: "vecino", name: 'Vecino del "not for sale"', emoji: "📢",
+    hp: 26, speed: 50, dmg: 5, r: 14, xp: 5, behavior: "caster",
+    tags: ["papel", "peaton"],
+    special: { castRange: 240, castCd: 6, zoneR: 70, zoneDur: 3.5, zoneType: "denuncia", telegraph: 1 },
+    quotes: ["¡BARCELONA NO ESTÁ EN VENTA!", "Esto antes era una mercería", "Firma aquí, veí"],
+    lore: "Lanza panfletos y zonas de denuncia que te inmovilizan. Es agresivo pero, y esto es lo peor, tiene razón.",
+  },
+  mimo: {
+    id: "mimo", name: "Mimo estatua viviente", emoji: "🗿",
+    hp: 22, speed: 95, dmg: 22, r: 14, xp: 5, behavior: "ambush",
+    tags: ["postureo", "callejero"],
+    special: { triggerDist: 95, lungeSpeed: 380, lungeDur: 0.5 },
+    quotes: ["*silencio inquietante*", "*se mueve UN pelín*", "*extiende el sombrero*"],
+    lore: "Inmóvil hasta que pasas cerca. Entonces: jumpscare de alto daño. Después vuelve a hacerse el interesante.",
+  },
+  ratero: {
+    id: "ratero", name: "Ratero del Raval", emoji: "🥷",
+    hp: 15, speed: 150, dmg: 9, r: 12, xp: 5, behavior: "stabber",
+    tags: ["callejero"],
+    special: { dashCd: 2.2, dashSpeed: 340, retreatDist: 160, steals: [1, 3] },
+    quotes: ["*ya tiene tu móvil*", "Tranquilo tranquilo", "*desaparece en un callejón*"],
+    lore: "Rapidísimo. Entra, pincha, te roba cèntims y se va antes de que proceses lo que ha pasado.",
+  },
+  taxista: {
+    id: "taxista", name: "Taxista cabreado", emoji: "🚕",
+    hp: 55, speed: 55, dmg: 14, r: 20, xp: 8, behavior: "charger",
+    tags: ["vehiculo"],
+    special: { chargeRange: 380, windup: 0.9, chargeSpeed: 330, breaksOnHit: false, chargeCd: 3.5, honkKnock: 180 },
+    quotes: ["¡¿Y LA VTC QUÉ?!", "Eso son bicicletas, no personas", "Yo por ahí no paso"],
+    lore: "Embiste, no se rompe, y su bocinazo te empuja. Lleva cabreado desde 2014 y no le falta motivo, según él.",
+  },
+  rider: {
+    id: "rider", name: "Rider con mochila-cubo", emoji: "🛵",
+    hp: 18, speed: 200, dmg: 8, r: 13, xp: 4, behavior: "rider",
+    tags: ["vehiculo"],
+    special: { retargetEvery: [1.2, 2.2] },
+    quotes: ["El algoritmo aprieta", "3 pedidos, 0 pausas", "*semáforo opcional*"],
+    lore: "Cruza el mapa en líneas rectas imposibles. No te ve: su app le da 4 minutos para llegar a Sants.",
+  },
+  cunyado: {
+    id: "cunyado", name: "Cuñado de terraza", emoji: "🗣️",
+    hp: 24, speed: 45, dmg: 6, r: 14, xp: 4, behavior: "skirmisher",
+    tags: ["peaton", "postureo"],
+    special: { minDist: 150, maxDist: 280, shootCd: 3, projSpeed: 110, projEmoji: "💬", homing: true },
+    quotes: ["Eso te lo arreglo yo en dos tardes", "A mí me lo van a contar", "Esto con el Barça de Guardiola no pasaba"],
+    lore: "Dispara opiniones no solicitadas que te persiguen lentamente por todo el mapa, como en la cena de Navidad.",
+  },
+  perroflauta: {
+    id: "perroflauta", name: "Percusionista asambleario", emoji: "🪘",
+    hp: 28, speed: 48, dmg: 5, r: 14, xp: 5, behavior: "caster",
+    tags: ["callejero", "papel"],
+    special: { castRange: 260, castCd: 7, zoneR: 90, zoneDur: 4, zoneType: "asamblea", telegraph: 1 },
+    quotes: ["Compañere, un momento", "Esto se decide en asamblea", "*ritmo hipnótico de djembé*"],
+    lore: "Invoca círculos de asamblea que te ralentizan y te absorben. Saldrás de ahí con tres comisiones asignadas.",
+  },
+  indepe: {
+    id: "indepe", name: "Manifestante con estelada", emoji: "🎗️",
+    hp: 22, speed: 88, dmg: 6, r: 13, xp: 4, behavior: "skirmisher",
+    tags: ["papel", "peaton"],
+    special: { minDist: 140, maxDist: 240, shootCd: 2.6, projSpeed: 190, projEmoji: "🚩", boomerang: true },
+    quotes: ["¡Els carrers seran sempre nostres!", "Votar no es delito", "*corta la Meridiana*"],
+    lore: "Lanza banderas boomerang y corta calles con una eficiencia logística admirable. Los martes, Meridiana.",
+  },
+  facha: {
+    id: "facha", name: "Nostálgico de bandera al hombro", emoji: "🦅",
+    hp: 40, speed: 42, dmg: 8, r: 15, xp: 5, behavior: "wall",
+    tags: ["peaton", "grupo"],
+    special: { rowSize: 4, rowSpacing: 34 },
+    quotes: ["Antes esto era España", "*marcha en formación*", "A mí Tarradellas me..."],
+    lore: "Avanza en falange lenta y compacta que hay que rodear. Su mayor arma es no moverse de sus ideas... ni de tu camino.",
+  },
+  hipster: {
+    id: "hipster", name: "Gentrificador de flat white", emoji: "☕",
+    hp: 34, speed: 52, dmg: 4, r: 14, xp: 7, behavior: "buffer",
+    tags: ["postureo"],
+    special: { auraR: 140, speedBuff: 1.3, dmgBuff: 1.25 },
+    quotes: ["This neighborhood is SO authentic", "Es un specialty de Etiopía", "My coworking is around the corner"],
+    lore: "No pega casi. No hace falta: a su alrededor todo 'sube de precio' — los enemigos cercanos van más rápido y pegan más.",
+  },
+};
+
+// Frases de muerte del jugador según quién te remata (para la pantalla de derrota).
+export const DEATH_QUOTES = {
+  cigarro: "Al final sí que llevabas un cigarro. Llevabas veinte. Te los quitaron todos.",
+  guiri: "Tus últimas palabras fueron 'the sangria is that way'. Murieron contigo.",
+  charo: "Saliste en el story. Con mala luz. Ese es tu legado.",
+  mantero: "El reloj era falso, pero el golpe en la cabeza era originalísimo.",
+  latero: "Cerveza-beer-un-euro fue lo último que escuchaste. Ni fría estaba.",
+  patinete: "Atropellado en una acera por un vehículo que legalmente no existe.",
+  freetour: "Moriste escuchando un dato falso sobre Gaudí. La propina era voluntaria. Tu vida también, por lo visto.",
+  vecino: "Te inmovilizó una denuncia. Lo peor es que firmaste. Lo peor-peor es que tenía razón.",
+  mimo: "Llevaba tres horas quieto. Tres HORAS. Y caíste igual.",
+  ratero: "Ni sentiste el golpe. Sí sentiste, en el alma, cómo se llevaba tu móvil.",
+  taxista: "Sus últimas palabras: '¿Y LA VTC QUÉ?'. Las tuyas: nada, te pilló hablando.",
+  rider: "El pedido llegó a tiempo. Tú no llegaste a nada.",
+  cunyado: "Te remató con un 'esto te lo arreglo yo en dos tardes'. Nadie arregló nada.",
+  perroflauta: "Moriste en asamblea. El acta de tu muerte se aprobará en la próxima sesión.",
+  indepe: "Una estelada boomerang. En tu esquela pone 'ho tornarem a fer'.",
+  facha: "Te arrolló una nostalgia en formación. Antes esto no pasaba, dicen.",
+  hipster: "No te mató él. Te mató el barrio entero subiendo de precio a la vez.",
+  boss: "Contra los jefes finales de esta ciudad no se puede. Todavía.",
+  generic: "Barcelona 1 — Tú 0. Como siempre.",
+};
