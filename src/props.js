@@ -276,6 +276,99 @@ export function drawProp(ctx, p, t, dark) {
       ctx.fillText("🕊️", x + 8, y - 28); // siempre hay una paloma encima
       break;
     }
+    case "terrace": { // terraza de bar: mesa, sillas y suplemento
+      ctx.strokeStyle = OUT;
+      ctx.fillStyle = "#8a6a48";
+      ctx.beginPath(); ctx.ellipse(x, y - 14, 15, 7, 0, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#7a5a3a";
+      ctx.fillRect(x - 2, y - 12, 4, 12);
+      // sillas plegables cutres
+      for (const sx of [-22, 22]) {
+        ctx.fillStyle = "#3a4046";
+        ctx.fillRect(x + sx - 5, y - 12, 10, 3);
+        ctx.fillRect(x + sx - 5, y - 12, 3, 12);
+      }
+      // pizarra de menú del día
+      ctx.fillStyle = "#2b2436";
+      rr(ctx, x + 30, y - 26, 22, 26, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#f7e9c8";
+      ctx.font = "bold 5px Trebuchet MS";
+      ctx.fillText("MENÚ", x + 41, y - 19);
+      ctx.fillText("14,50€", x + 41, y - 13);
+      ctx.font = "4px Trebuchet MS";
+      ctx.fillText("(antes 9,90)", x + 41, y - 7);
+      // caña a medias en la mesa
+      ctx.font = "8px serif";
+      ctx.fillText("🍺", x + 3, y - 16);
+      break;
+    }
+    case "laundry": { // ropa tendida de balcón a balcón
+      ctx.strokeStyle = OUT;
+      ctx.fillStyle = "#5a5f6b";
+      ctx.fillRect(x - 38, y - 46, 4, 46);
+      ctx.fillRect(x + 34, y - 46, 4, 46);
+      ctx.strokeStyle = "#888";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x - 34, y - 42);
+      ctx.quadraticCurveTo(x, y - 36 + Math.sin(t * 1.2) * 1.5, x + 34, y - 42);
+      ctx.stroke();
+      ctx.strokeStyle = OUT;
+      const clothes = [["#e05a72", 8], ["#f0e5d2", 10], ["#3d6ea5", 7], ["#5f9e52", 9]];
+      let cx2 = x - 26;
+      for (const [col, w] of clothes) {
+        const sway = Math.sin(t * 1.4 + cx2) * 1.6;
+        ctx.fillStyle = col;
+        rr(ctx, cx2 + sway, y - 41, w, 12 + (w % 3) * 2, 1.5);
+        ctx.fill(); ctx.stroke();
+        cx2 += w + 7;
+      }
+      break;
+    }
+    case "bicing": { // estación de Bicing (siempre vacía o llena, sin término medio)
+      ctx.strokeStyle = OUT;
+      ctx.fillStyle = "#b3403a";
+      rr(ctx, x - 30, y - 30, 12, 30, 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 5px Trebuchet MS";
+      ctx.fillText("BICING", x - 24, y - 22);
+      ctx.font = "4px Trebuchet MS";
+      ctx.fillText("0 disp.", x - 24, y - 16);
+      // anclajes: solo UNA bici, con la rueda pinchada
+      ctx.fillStyle = "#8d8a9c";
+      for (let i = 0; i < 3; i++) rr(ctx, x - 12 + i * 15, y - 8, 4, 8, 1), ctx.fill();
+      ctx.strokeStyle = "#b3403a";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(x + 6, y - 7, 5, 0, TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + 17, y - 7, 5, 0.2, TAU - 0.9); ctx.stroke(); // pinchada
+      ctx.beginPath(); ctx.moveTo(x + 6, y - 7); ctx.lineTo(x + 11, y - 16); ctx.lineTo(x + 17, y - 7); ctx.stroke();
+      ctx.strokeStyle = OUT;
+      break;
+    }
+    case "graffiti": { // trozo de muro con arte urbano de nivel discutible
+      ctx.strokeStyle = OUT;
+      ctx.fillStyle = "#8d8578";
+      rr(ctx, x - 34, y - 40, 68, 40, 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#00000022";
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(x - 34, y - 40 + i * 10); ctx.lineTo(x + 34, y - 40 + i * 10); ctx.stroke();
+      }
+      ctx.strokeStyle = OUT;
+      const tags = ["TOURIST GO HOME*", "OKUPA & FELIZ", "MÉS VERMUT", "PAELLA IS A LIE"];
+      const sub = ["*escrito por un erasmus", "(piso de sus padres)", "", "(la de aquí, no)"];
+      const idx = Math.floor(v * tags.length);
+      ctx.fillStyle = ["#e05a8f", "#3db6a5", "#e8c33d", "#c96be0"][idx];
+      ctx.font = "bold italic 9px Trebuchet MS";
+      ctx.save();
+      ctx.translate(x, y - 24);
+      ctx.rotate(-0.06);
+      ctx.fillText(tags[idx], 0, 0);
+      ctx.fillStyle = "#f0e5d2aa";
+      ctx.font = "italic 5px Trebuchet MS";
+      ctx.fillText(sub[idx], 0, 8);
+      ctx.restore();
+      break;
+    }
     case "fountain": { // Canaletes: si bebes, vuelves
       ctx.strokeStyle = OUT;
       ctx.fillStyle = "#3a4046";

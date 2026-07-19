@@ -59,8 +59,19 @@ function flash() {
 }
 
 // ------------------------------------------------------------ menú principal
+const TAGLINES = [
+  "L'última persona que parla català contra los tópicos de la ciudad.",
+  "Sobrevive a tu propio barrio. Nadie lo ha conseguido aún.",
+  "El único juego donde el jefe final es tu casero.",
+  "10 minutos de partida. 37 años de hipoteca.",
+  "Ni la rata paga tanto alquiler como tú.",
+  "Basado en hechos reales. Por desgracia, en todos.",
+  "Ahora con más 'amego, ¿segarro?' por metro cuadrado.",
+];
+
 function buildMenu() {
   $("menucoins").textContent = `🪙 ${meta.coins} cèntims`;
+  document.querySelector("#menu .tagline").textContent = TAGLINES[Math.floor(Math.random() * TAGLINES.length)];
 
   const cr = $("charrow");
   cr.innerHTML = "";

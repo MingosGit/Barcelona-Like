@@ -365,6 +365,102 @@ export function drawBird(ctx, x, y, o) {
   ctx.restore();
 }
 
+export function drawRat(ctx, x, y, o) {
+  const sc = o.scale || 1;
+  const t = o.t || 0;
+  const scurry = Math.sin(t * 22 + (o.phase || 0)) * 1.5 * sc;
+  ctx.save();
+  ctx.translate(x, y - 3 * sc);
+  ctx.scale(o.face || 1, 1);
+  ctx.lineWidth = 1.3 * sc;
+  // cola
+  ctx.strokeStyle = "#c98a8a";
+  ctx.beginPath();
+  ctx.moveTo(-8 * sc, 0);
+  ctx.quadraticCurveTo(-15 * sc, -3 * sc + scurry, -19 * sc, 1 * sc - scurry);
+  ctx.stroke();
+  ctx.strokeStyle = OUT;
+  // cuerpo
+  px(ctx, o.color || "#6e6259");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9 * sc, 5.5 * sc, 0, 0, TAU);
+  ctx.fill(); ctx.stroke();
+  // cabeza puntiaguda
+  ctx.beginPath();
+  ctx.moveTo(6 * sc, -3.5 * sc);
+  ctx.quadraticCurveTo(14 * sc, -1 * sc, 13.5 * sc, 2 * sc);
+  ctx.quadraticCurveTo(9 * sc, 4 * sc, 5 * sc, 3 * sc);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // oreja + ojo + bigotes
+  ctx.beginPath(); ctx.arc(5.5 * sc, -4.5 * sc, 2.4 * sc, 0, TAU); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = OUT;
+  ctx.beginPath(); ctx.arc(9.5 * sc, -0.5 * sc, 1 * sc, 0, TAU); ctx.fill();
+  ctx.strokeStyle = "#00000077";
+  ctx.lineWidth = 0.8 * sc;
+  ctx.beginPath(); ctx.moveTo(12 * sc, 1 * sc); ctx.lineTo(17 * sc, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12 * sc, 2 * sc); ctx.lineTo(17 * sc, 3 * sc); ctx.stroke();
+  ctx.restore();
+}
+
+export function drawRoach(ctx, x, y, o) {
+  const sc = o.scale || 1;
+  const t = o.t || 0;
+  const jitter = Math.sin(t * 30 + (o.phase || 0)) * 0.8 * sc;
+  ctx.save();
+  ctx.translate(x + jitter, y - 2 * sc);
+  ctx.scale(o.face || 1, 1);
+  ctx.lineWidth = 1.1 * sc;
+  // patas frenéticas
+  ctx.strokeStyle = "#3a2a1a";
+  for (let i = -1; i <= 1; i++) {
+    const k = Math.sin(t * 30 + i * 2) * 2 * sc;
+    ctx.beginPath(); ctx.moveTo(i * 3 * sc, 0); ctx.lineTo(i * 3 * sc - 4 * sc, 4 * sc + k); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i * 3 * sc, 0); ctx.lineTo(i * 3 * sc + 4 * sc, 4 * sc - k); ctx.stroke();
+  }
+  ctx.strokeStyle = OUT;
+  // cuerpo brillante
+  px(ctx, "#5a3620");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 7 * sc, 4.2 * sc, 0, 0, TAU);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#7a4a2a";
+  ctx.beginPath();
+  ctx.ellipse(-1 * sc, -1 * sc, 4 * sc, 2 * sc, 0, 0, TAU);
+  ctx.fill();
+  // antenas
+  ctx.strokeStyle = "#3a2a1a";
+  ctx.beginPath(); ctx.moveTo(6 * sc, -2 * sc); ctx.quadraticCurveTo(11 * sc, -6 * sc, 13 * sc, -4 * sc + jitter); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(6 * sc, -1 * sc); ctx.quadraticCurveTo(12 * sc, -3 * sc, 14 * sc, 0 + jitter); ctx.stroke();
+  ctx.restore();
+}
+
+// manta de top manta desplegada en el suelo, con género expuesto
+export function drawManta(ctx, x, y, o) {
+  const sc = o.scale || 1;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.lineWidth = 1.5;
+  px(ctx, "#f0f0f0");
+  ctx.save();
+  ctx.rotate(0.06);
+  rr(ctx, -30 * sc, -18 * sc, 60 * sc, 36 * sc, 3 * sc);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+  // género: relojes, bolsos, zapas
+  ctx.font = `${Math.round(9 * sc)}px serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("⌚", -16 * sc, -6 * sc);
+  ctx.fillText("👜", 0, -4 * sc);
+  ctx.fillText("👟", 15 * sc, -6 * sc);
+  ctx.fillText("🕶️", -8 * sc, 8 * sc);
+  ctx.fillText("⌚", 10 * sc, 9 * sc);
+  // cuerdas de plegado exprés en las esquinas
+  ctx.strokeStyle = "#00000044";
+  ctx.beginPath(); ctx.moveTo(-28 * sc, -16 * sc); ctx.lineTo(-34 * sc, -22 * sc); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(28 * sc, -16 * sc); ctx.lineTo(34 * sc, -22 * sc); ctx.stroke();
+  ctx.restore();
+}
+
 export function drawCraneBoss(ctx, x, y, o) {
   const sc = (o.scale || 1) * 0.9;
   const t = o.t || 0;

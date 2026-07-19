@@ -171,9 +171,53 @@ export class Game {
     this.updateZones(dt);
     this.updatePickups(dt);
     this.updateFloaters(dt);
+    this.updateAmbient(dt);
     this.director(dt);
 
     if (this.biome.craneRain) this.craneRain(dt);
+  }
+
+  // ------------------------------------------------------------ vida ambiental
+  // Fauna decorativa que NO ataca: palomas picoteando que huyen de ti,
+  // ratas que cruzan la calle. Pura ambientación.
+  updateAmbient(dt) {
+    const p = this.player;
+    this.ambientT = (this.ambientT ?? 1) - dt;
+    if (this.ambientT <= 0 && (this.ambient?.length || 0) < 7) {
+      this.ambientT = rand(1.2, 3);
+      if (!this.ambient) this.ambient = [];
+      const a = rand(TAU);
+      const d = rand(200, 430);
+      const x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
+      const seedy = this.biome.dark || this.biome.id === "raval" || this.biome.id === "sagrada";
+      if (seedy && chance(0.55)) {
+        this.ambient.push({ type: "rat", x, y, dir: rand(TAU), t: rand(2, 3.5), phase: rand(TAU) });
+      } else {
+        this.ambient.push({ type: "pigeon", x, y, t: rand(5, 9), phase: rand(TAU), flee: 0, z: 0 });
+      }
+    }
+    if (!this.ambient) return;
+    for (const am of this.ambient) {
+      am.t -= dt;
+      if (am.type === "rat") {
+        am.x += Math.cos(am.dir) * 200 * dt;
+        am.y += Math.sin(am.dir) * 200 * dt;
+      } else {
+        const dp = dist(p.x, p.y, am.x, am.y);
+        if (!am.flee && dp < 78) { // te acercas → se van (menos la de plaça Catalunya)
+          am.flee = 1;
+          am.t = Math.min(am.t, 0.9);
+          am.dir = Math.atan2(am.y - p.y, am.x - p.x);
+        }
+        if (am.flee) {
+          am.x += Math.cos(am.dir) * 270 * dt;
+          am.y += Math.sin(am.dir) * 270 * dt;
+          am.z += 70 * dt;
+        }
+      }
+      if (dist(p.x, p.y, am.x, am.y) > 720) am.t = 0;
+    }
+    this.ambient = this.ambient.filter((a) => a.t > 0);
   }
 
   // ------------------------------------------------------------ jugador
@@ -657,6 +701,12 @@ export class Game {
       }
       return;
     }
+    if (def.special && def.special.flock) { // las palomas vienen en escuadrón
+      for (let i = 0; i < def.special.flock; i++) {
+        this.spawnEnemy(id, p.x + Math.cos(a) * d + rand(-40, 40), p.y + Math.sin(a) * d + rand(-40, 40), false);
+      }
+      return;
+    }
     if (def.behavior === "wall") {
       const px = -Math.sin(a), py = Math.cos(a);
       for (let i = 0; i < def.special.rowSize; i++) {
@@ -807,10 +857,16 @@ export class Game {
         }
       }
 
-      // bocadillos de texto
+      // frase de presentación: te saluda con SU frase nada más verte
+      if (!e.introSaid && dp < 270 && !e.state.hidden && !e.say && this.bubbles < 6) {
+        e.introSaid = true;
+        e.say = { text: e.def.intro || e.def.quotes[0], t: 2.4 };
+        this.bubbles++;
+      }
+      // bocadillos de texto periódicos
       e.sayT -= dt;
-      if (e.sayT <= 0 && this.bubbles < 4 && dp < 380 && !e.state.hidden) {
-        e.sayT = rand(10, 25);
+      if (e.sayT <= 0 && this.bubbles < 6 && dp < 380 && !e.state.hidden && !e.say) {
+        e.sayT = rand(9, 22);
         e.say = { text: pick(e.def.quotes), t: 2.2 };
         this.bubbles++;
       }
@@ -1064,7 +1120,50 @@ export class Game {
         break;
       }
 
-      case "flyer": { // gaviota: vuela sobre todo y roba tickets
+      case "scurry": { // ratas y cucarachas: zigzag frenético con pausas
+        S.pauseT = (S.pauseT ?? 0) - dt;
+        if (S.pauseT > 0) break; // se para en seco, como para mirarte
+        if (chance(0.006)) { S.pauseT = rand(0.2, 0.5); break; }
+        const a = Math.atan2(p.y - e.y, p.x - e.x) + Math.sin(this.time * 13 + e.phase) * 1.1;
+        e.x += Math.cos(a) * spd * dt;
+        e.y += Math.sin(a) * spd * dt;
+        break;
+      }
+
+      case "manta": { // top manta desplegado: tienda portátil + plegado exprés
+        S.mode = S.mode || "setup";
+        if (S.mode === "setup") { // desplegado: dispara y la manta te hace tropezar
+          S.shootT = (S.shootT ?? rand(0.5, sp.shootCd)) - dt;
+          if (S.shootT <= 0 && dp < 340) {
+            S.shootT = sp.shootCd;
+            const [dx, dy] = norm(p.x - e.x, p.y - e.y);
+            this.eProjectiles.push({
+              x: e.x, y: e.y, vx: dx * sp.projSpeed, vy: dy * sp.projSpeed,
+              dmg: e.def.dmg, r: 8, emoji: pick(["👟", "👜", "⌚"]), ttl: 4,
+            });
+          }
+          if (dp < sp.mantaR + p.r + 6) p.stickT = Math.max(p.stickT, 0.6); // tropiezas con el género
+          if (dp < 85 || (S.lastHp !== undefined && e.hp < S.lastHp)) {
+            S.mode = "fold"; // ¡policía no! pliega en 0,2s
+            S.foldT = 0.2;
+            if (this.bubbles < 6 && !e.say) { e.say = { text: "*pliega la manta en 0,2s*", t: 1.4 }; this.bubbles++; }
+          }
+          S.lastHp = e.hp;
+        } else if (S.mode === "fold") {
+          S.foldT -= dt;
+          if (S.foldT <= 0) {
+            const a2 = rand(TAU);
+            e.x = p.x + Math.cos(a2) * sp.relocateDist;
+            e.y = p.y + Math.sin(a2) * sp.relocateDist;
+            this.effects.push({ type: "pop", x: e.x, y: e.y, emoji: "🛍️", t: 0.4, dur: 0.4 });
+            S.mode = "setup";
+            S.lastHp = e.hp;
+          }
+        }
+        break;
+      }
+
+      case "flyer": { // gaviota/palomas: vuelan sobre todo y roban tickets
         S.mode = S.mode || "circle";
         if (S.mode === "circle") {
           S.orbA = (S.orbA ?? rand(TAU)) + dt * 1.4;

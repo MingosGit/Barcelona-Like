@@ -109,6 +109,15 @@ caster, ambush, stabber, rider, wall, buffer`.
 | **Camarero de terraza trampa** 🧾 | skirmisher | Cuentas infladas teledirigidas ("son 27,50; el pan se cobra") |
 | **Dependiente de fundas** 📱 | skirmisher | Lanza carcasas; su tienda lleva 9 años "de liquidación" |
 | **Repartidor de flyers de kebab** 🥙 | skirmisher | Sus flyers 2x1 se te pegan a los pies y te frenan |
+| **Rata de Ciutat Vella** 🐀 | scurry | Vecina histórica de verdad: empadronada desde 1714, paga menos alquiler que tú |
+| **Cucaracha de bar de menú** 🪳 | scurry | Sale en manadas a las 3 AM; sobrevivirá a la gentrificación y a tu partida |
+| **Palomas de plaça Catalunya** 🕊️ | flyer (escuadrón) | Vuelan en flota, te confunden con una señora con pan; la de plaça Catalunya no huye: negocia |
+| **Top manta desplegado** 🛍️ | manta | Monta la tienda entera en tu camino (tropiezas con el género); si te acercas, pliega en 0,2 s y reaparece 20 m más allá |
+
+Además, **cada enemigo suelta su frase icónica al verte por primera vez**
+(intro contextual: "Amego... ¿segarro?", "¡¡¡CARRIIIIIL!!!") y hay **fauna
+ambiental no hostil** (palomas picoteando que huyen al acercarte, ratas
+cruzando la calle) que da vida a los barrios sin tocar el combate.
 
 > **Nota de tono:** la sátira política reparte a ambos lados (estelada y
 > bandera al hombro reciben por igual), y los arquetipos de economía

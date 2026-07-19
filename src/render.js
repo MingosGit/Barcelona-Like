@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 import { TAU, clamp, hash2 } from "./util.js";
 import { STATUS_INFO } from "./game.js";
-import { drawHumanoid, drawBird, drawCraneBoss } from "./sprites.js";
+import { drawHumanoid, drawBird, drawCraneBoss, drawRat, drawRoach, drawManta } from "./sprites.js";
 import { drawProp } from "./props.js";
 
 const ZONE_STYLE = {
@@ -82,6 +82,23 @@ export function render(game, ctx, W, H) {
     drawProp(ctx, { ...o, x: o.x - camX, y: o.y - camY }, t, b.dark);
     if (b.dark && (o.kind === "lamp" || o.kind === "shop")) {
       lampGlows.push({ x: o.x - camX + (o.kind === "lamp" ? 13 : 0), y: o.y - camY - (o.kind === "lamp" ? 35 : 20), r: o.kind === "lamp" ? 80 : 55 });
+    }
+  }
+
+  // ---- fauna ambiental (palomas picoteando, ratas cruzando)
+  if (game.ambient) {
+    for (const am of game.ambient) {
+      const ax = am.x - camX, ay = am.y - camY;
+      if (ax < -40 || ax > W + 40 || ay < -40 || ay > H + 40) continue;
+      if (am.type === "rat") {
+        drawRat(ctx, ax, ay, { t, scale: 0.7, phase: am.phase, face: Math.cos(am.dir) >= 0 ? 1 : -1 });
+      } else {
+        // paloma: picotea; si huye, alza el vuelo
+        const peck = am.flee ? 0 : Math.max(0, Math.sin(t * 6 + am.phase)) * 2;
+        ctx.globalAlpha = am.flee ? clamp(am.t / 0.9, 0, 1) : 1;
+        drawBird(ctx, ax, ay - (am.z || 0) + peck, { t: am.flee ? t : 0.04, scale: 0.5, phase: am.phase, face: am.flee && Math.cos(am.dir) < 0 ? -1 : 1, color: "#b9bcc8" });
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
@@ -235,6 +252,15 @@ export function render(game, ctx, W, H) {
     ctx.restore();
   }
 
+  // ---- viñeta sutil: profundidad de cámara
+  {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.78);
+    g.addColorStop(0, "rgba(20,12,30,0)");
+    g.addColorStop(1, "rgba(20,12,30,.22)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   // ---- ceguera por flash
   if (p.blindT > 0) {
     ctx.fillStyle = `rgba(255,255,255,${clamp(p.blindT / 1.3, 0, 1) * 0.75})`;
@@ -343,6 +369,23 @@ function drawGround(game, ctx, W, H, camX, camY) {
             ctx.restore();
           }
           break;
+      }
+      // charcos en los barrios viejos (reflejan la luz de noche)
+      if ((b.id === "gotic" || b.id === "raval") && h > 0.955) {
+        ctx.fillStyle = b.dark ? "rgba(150,170,230,.16)" : "rgba(80,100,130,.14)";
+        ctx.beginPath();
+        ctx.ellipse(cx + tile / 2, cy + tile / 2, 20 + h * 12, 10, 0.3, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = b.dark ? "rgba(255,225,150,.14)" : "rgba(255,255,255,.1)";
+        ctx.beginPath();
+        ctx.ellipse(cx + tile / 2 - 6, cy + tile / 2 - 2, 8, 3, 0.3, 0, TAU);
+        ctx.fill();
+      }
+      // basurilla dispersa: la ciudad respira
+      if (h > 0.68 && h < 0.705) {
+        ctx.fillStyle = "rgba(0,0,0,.12)";
+        ctx.fillRect(cx + (h * 977) % tile, cy + (h * 631) % tile, 3.5, 2.5);
+        ctx.fillRect(cx + (h * 431) % tile, cy + (h * 269) % tile, 2.5, 3.5);
       }
     }
   }
@@ -533,14 +576,27 @@ function drawEnemy(game, ctx, e, ex, ey, t) {
   const moving = e._px !== undefined && (Math.abs(e.x - e._px) + Math.abs(e.y - e._py)) > 0.25;
   e._px = e.x; e._py = e.y;
 
+  // el top manta desplegado dibuja su tienda entera en el suelo
+  if (e.def.behavior === "manta" && e.state.mode !== "fold") {
+    drawManta(ctx, ex, ey + 10, { scale: 0.85 });
+  }
+
   const opts = {
     t, moving, face: e.face || 1, scale, phase: e.phase || 0,
     alpha: hidden ? 0.45 : 1, flash: e.flashT || 0,
     skin: e.skin, hairTone: e.hairTone,
   };
   if (spec.custom === "bird") drawBird(ctx, ex, ey, { ...opts, color: spec.color });
+  else if (spec.custom === "rat") drawRat(ctx, ex, ey, opts);
+  else if (spec.custom === "roach") drawRoach(ctx, ex, ey, opts);
   else if (spec.custom === "crane") drawCraneBoss(ctx, ex, ey, opts);
   else drawHumanoid(ctx, spec, ex, ey, opts);
+  if (spec.custom && spec.custom !== "crane" && e.flashT > 0) { // flash de daño en fauna
+    ctx.globalAlpha = Math.min(0.7, e.flashT * 8);
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(ex, ey - 8 * scale, 13 * scale, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 
   if (e.elite) {
     ctx.font = `${Math.round(12 * scale)}px serif`;
