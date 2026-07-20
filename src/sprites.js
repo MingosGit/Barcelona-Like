@@ -175,9 +175,9 @@ export function drawHumanoid(ctx, s, x, y, o) {
       ctx.fillStyle = "#9fd7ff";
       ctx.beginPath(); ctx.arc(0, bodyTop + 7.5 * sc, 1.5 * sc, 0, TAU); ctx.fill();
     }
-    // brazos
-    px(ctx, s.shirtless ? skin : outfit);
-    const aw = 3.6 * sc;
+    // brazos (tanquetop = brazos al aire para lucir bíceps en enero)
+    px(ctx, s.shirtless || s.tankTop ? skin : outfit);
+    const aw = s.tankTop ? 4.6 * sc : 3.6 * sc;
     rr(ctx, -bw / 2 - aw + 0.5 * sc, bodyTop + 2 * sc + walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
     rr(ctx, bw / 2 - 0.5 * sc, bodyTop + 2 * sc - walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
     drawHead(ctx, s, sc, skin, o, bodyTop);
@@ -231,6 +231,14 @@ function drawHead(ctx, s, sc, skin, o, bodyTop) {
       ctx.arc(0, hy, hr + 0.8 * sc, Math.PI * 0.85, Math.PI * 0.15);
       ctx.rect(-hr - 0.8 * sc, hy, (hr + 0.8 * sc) * 2, 6 * sc);
       ctx.fill();
+    } else if (s.hairStyle === "bob") { // el bob de la Montse: geometría perfecta
+      ctx.beginPath();
+      ctx.arc(0, hy, hr + 1.2 * sc, Math.PI * 0.9, Math.PI * 0.1);
+      ctx.rect(-hr - 1.2 * sc, hy - 1 * sc, (hr + 1.2 * sc) * 2, 4.5 * sc);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, hy, hr + 1.2 * sc, Math.PI * 0.9, Math.PI * 0.1);
+      ctx.stroke();
     } else if (s.hairStyle === "grey-bun") {
       ctx.fillStyle = "#cfcfcf";
       ctx.arc(0, hy, hr, Math.PI, 0); ctx.fill();

@@ -15,6 +15,8 @@ const ZONE_STYLE = {
   salsa: { fill: "rgba(230,90,40,.30)", stroke: "rgba(230,90,40,.8)", icon: "🌶️" },
   obra: { fill: "rgba(255,140,30,.30)", stroke: "rgba(255,140,30,.9)", icon: "⚠️" },
   cristales: { fill: "rgba(170,215,235,.28)", stroke: "rgba(170,215,235,.8)", icon: "🍾" },
+  charco: { fill: "rgba(215,190,90,.30)", stroke: "rgba(215,190,90,.75)", icon: "🫣" },
+  bronca: { fill: "rgba(190,110,150,.28)", stroke: "rgba(190,110,150,.8)", icon: "🥖" },
 };
 
 export function render(game, ctx, W, H) {
@@ -174,6 +176,37 @@ export function render(game, ctx, W, H) {
       ctx.moveTo(ex, ey);
       ctx.lineTo(ex + fx.dx * fx.len, ey + fx.dy * fx.len);
       ctx.stroke();
+    } else if (fx.type === "burst") { // metralla con firma del difunto
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = fx.color;
+      for (let i = 0; i < 7; i++) {
+        const a = (fx.seed * 0.7 + i) * 0.9;
+        const d = 6 + k * 34 + ((fx.seed + i * 13) % 9);
+        const px2 = ex + Math.cos(a) * d, py2 = ey + Math.sin(a) * d - k * k * 26;
+        ctx.save();
+        ctx.translate(px2, py2);
+        ctx.rotate(a + k * 6);
+        ctx.fillRect(-2.5, -2.5, 5, 5);
+        ctx.restore();
+      }
+      ctx.font = "13px serif";
+      ctx.textAlign = "center";
+      ctx.fillText(fx.sig, ex + Math.sin(fx.seed) * 10, ey - 10 - k * 30);
+      ctx.globalAlpha = 1;
+    } else if (fx.type === "hearts") { // el Galán ha atacado
+      ctx.globalAlpha = 1 - k;
+      ctx.font = "14px serif";
+      ctx.textAlign = "center";
+      for (let i = 0; i < 4; i++) {
+        ctx.fillText("💘", ex + Math.sin(i * 2.4 + k * 5) * (10 + i * 6), ey - k * 40 - i * 8);
+      }
+      ctx.globalAlpha = 1;
+    } else if (fx.type === "levelup") {
+      ctx.strokeStyle = `rgba(242,177,52,${1 - k})`;
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(ex, ey, fx.r * k, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,240,200,${(1 - k) * 0.7})`;
+      ctx.beginPath(); ctx.arc(ex, ey, fx.r * k * 0.6, 0, TAU); ctx.stroke();
     }
   }
 

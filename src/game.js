@@ -265,6 +265,11 @@ export class Game {
         if (z.telegraph > 0 || z.owner !== "enemy") continue;
         if (dist(p.x, p.y, z.x, z.y) > z.r) continue;
         if (z.type === "vomito") slow = Math.min(slow, 0.55);
+        if (z.type === "charco") slow = Math.min(slow, 0.6); // el charco sospechoso
+        if (z.type === "bronca") { // la Montse te drena... pero nunca te remata
+          slow = Math.min(slow, 0.6);
+          if (p.hp > 5) p.hp = Math.max(5, p.hp - 4 * dt);
+        }
         if (z.type === "asamblea") {
           slow = Math.min(slow, 0.6);
           const [dx, dy] = norm(z.x - p.x, z.y - p.y);
@@ -637,7 +642,14 @@ export class Game {
     this.pickups.push({ x: e.x + rand(-6, 6), y: e.y + rand(-6, 6), type: "xp", val: e.def.xp * xpMul, emoji: "🎫" });
     if (chance(0.13)) this.pickups.push({ x: e.x + rand(-12, 12), y: e.y + rand(-12, 12), type: "coin", val: randInt(1, 3), emoji: "🪙" });
     if (chance(0.025)) this.pickups.push({ x: e.x, y: e.y, type: "heal", val: 15, emoji: "🍅" });
+    // dispersión con firma: cada tópico estalla en lo suyo
     this.effects.push({ type: "pop", x: e.x, y: e.y, emoji: e.def.emoji, t: 0.35, dur: 0.35 });
+    this.effects.push({
+      type: "burst", x: e.x, y: e.y, t: 0.55, dur: 0.55,
+      color: e.def.sprite?.outfit || "#c8b4d6",
+      sig: e.def.sprite?.prop || e.def.emoji,
+      seed: randInt(1, 999),
+    });
 
     if (e.boss) {
       this.boss = null;
@@ -699,6 +711,11 @@ export class Game {
       for (let i = 0; i < def.special.packSize; i++) {
         this.spawnEnemy(id, p.x + Math.cos(a) * d + rand(-35, 35), p.y + Math.sin(a) * d + rand(-35, 35), elite && i === 0);
       }
+      return;
+    }
+    if (def.behavior === "twins") { // los Mellizos vienen de dos en dos, obviamente
+      this.spawnEnemy(id, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, elite);
+      this.spawnEnemy(id, p.x + Math.cos(a + Math.PI) * d, p.y + Math.sin(a + Math.PI) * d, false);
       return;
     }
     if (def.special && def.special.flock) { // las palomas vienen en escuadrón
@@ -846,6 +863,7 @@ export class Game {
       if (dp < p.r + e.r && e.attackCd <= 0 && !(e.state.hidden)) {
         e.attackCd = 0.8;
         this.hurtPlayer(e.def.dmg * (e._dmgBuff || 1) * (e.elite ? 1.5 : 1), e.def.id);
+        if (e.def.special?.blindOnHit) p.blindT = Math.max(p.blindT, e.def.special.blindOnHit);
         if (e.def.behavior === "stabber") {
           const steal = Math.min(p.coins, randInt(...e.def.special.steals));
           if (steal > 0) {
@@ -1120,6 +1138,101 @@ export class Game {
         break;
       }
 
+      case "charmer": { // el Galán: te aturde de puro encanto y se cobra
+        S.cd = Math.max(0, (S.cd ?? 0) - dt);
+        if (S.retreatT > 0) {
+          S.retreatT -= dt;
+          this.steer(e, p.x, p.y, -spd * 0.7, dt);
+          break;
+        }
+        this.steer(e, p.x, p.y, spd, dt);
+        if (dp < sp.charmRange && S.cd <= 0) {
+          S.cd = sp.charmCd;
+          S.retreatT = 1.2;
+          p.stunT = Math.max(p.stunT, sp.charmStun);
+          const steal = Math.min(p.coins, randInt(...sp.charmSteal));
+          if (steal > 0) p.coins -= steal;
+          this.floaters.push({ x: p.x, y: p.y - 34, text: `💘 embelesado ${steal ? `(-${steal} 🪙)` : ""}`, t: 1.2, color: "#ff9ecb", vy: -40, big: true });
+          this.effects.push({ type: "hearts", x: p.x, y: p.y - 10, t: 0.9, dur: 0.9 });
+        }
+        break;
+      }
+
+      case "twins": { // los Mellizos: pinza sincronizada
+        if (!S.pair) { // encuentra a su hermano (el otro twin sin pareja)
+          for (const o of this.enemies) {
+            if (o !== e && o.def.id === e.def.id && o.state && !o.state.pair && !o.dead) {
+              const shared = { t: 0, phase: rand(TAU), charging: 0 };
+              S.pair = o.state.pair = shared;
+              S.side = 0; o.state.side = 1;
+              break;
+            }
+          }
+          if (!S.pair) { this.steer(e, p.x, p.y, spd, dt); break; } // gemelo huérfano: triste pero funcional
+        }
+        const sh = S.pair;
+        if (S.side === 0) sh.t -= dt; // solo un hermano lleva el reloj
+        if (sh.charging > 0) {
+          if (S.side === 0) sh.charging -= dt;
+          const dir = S.chargeDir || (S.chargeDir = norm(p.x - e.x, p.y - e.y));
+          e.x += dir[0] * sp.chargeSpeed * dt;
+          e.y += dir[1] * sp.chargeSpeed * dt;
+          if (sh.charging <= 0) S.chargeDir = null;
+          break;
+        }
+        // colócate en tu flanco: lados opuestos del jugador
+        const a2 = sh.phase + S.side * Math.PI;
+        const tx = p.x + Math.cos(a2) * sp.flankDist;
+        const ty = p.y + Math.sin(a2) * sp.flankDist;
+        this.steer(e, tx, ty, spd * 1.2, dt);
+        if (S.side === 0 && sh.t <= 0 && dist(e.x, e.y, tx, ty) < 40) {
+          sh.t = sp.syncCd;
+          sh.charging = 0.8; // ¡A LA VEZ, HERMANO!
+          this.floaters.push({ x: e.x, y: e.y - 30, text: "¡A LA VEZ!", t: 0.9, color: "#fff", vy: -40, big: true });
+        }
+        break;
+      }
+
+      case "afters": { // el del after: zigzag imposible, mandíbula en si bemol
+        const a3 = Math.atan2(p.y - e.y, p.x - e.x) + Math.sin(this.time * 9 + e.phase) * 1.4;
+        e.x += Math.cos(a3) * spd * dt;
+        e.y += Math.sin(a3) * spd * dt;
+        break;
+      }
+
+      case "relief": { // el meador fantasma: mira a los lados y deja regalo
+        if (S.relieving > 0) {
+          S.relieving -= dt;
+          if (S.relieving <= 0) {
+            this.zones.push({ x: e.x + 14, y: e.y + 4, r: sp.charcoR, type: "charco", t: sp.charcoDur, telegraph: 0, owner: "enemy" });
+            if (!e.say && this.bubbles < 6) { e.say = { text: "*alivio inmenso*", t: 1.4 }; this.bubbles++; }
+          }
+          break; // quieto, concentrado, mirando la pared
+        }
+        this.steer(e, p.x, p.y, spd, dt);
+        S.reliefT = (S.reliefT ?? rand(...sp.reliefEvery)) - dt;
+        if (S.reliefT <= 0) {
+          S.reliefT = rand(...sp.reliefEvery);
+          S.relieving = 1.4;
+        }
+        break;
+      }
+
+      case "shy": { // el "yo solo pasaba": SOLO avanza cuando no le miras
+        const [lx, ly] = norm(e.x - p.x, e.y - p.y);
+        const looking = p.faceX * lx + p.faceY * ly > sp.shyCone;
+        if (looking) {
+          // congelado: silba, suda y jura que venía a por pan
+          if (!e.say && this.bubbles < 6 && chance(0.004)) {
+            e.say = { text: pick(["*se para en seco*", "*silba*", "Venía a por pan"]), t: 1.3 };
+            this.bubbles++;
+          }
+        } else {
+          this.steer(e, p.x, p.y, spd * 1.5, dt); // por la espalda, rapidísimo
+        }
+        break;
+      }
+
       case "scurry": { // ratas y cucarachas: zigzag frenético con pausas
         S.pauseT = (S.pauseT ?? 0) - dt;
         if (S.pauseT > 0) break; // se para en seco, como para mirarte
@@ -1221,7 +1334,8 @@ export class Game {
     this.enemies.push(e);
     this.boss = e;
     this.bossSpawned = true;
-    this.cb.toast(`⚠️ ${def.name} ⚠️`);
+    if (this.cb.bossIntro) this.cb.bossIntro(def);
+    else this.cb.toast(`⚠️ ${def.name} ⚠️`);
     sfx.boss();
     this.shake = 10;
   }
@@ -1556,6 +1670,7 @@ export class Game {
     }
     if (this.levelUpsQueued > 0 && !this.levelUpActive) {
       this.levelUpActive = true;
+      this.effects.push({ type: "levelup", x: p.x, y: p.y, r: 90, t: 0.6, dur: 0.6 });
       this.cb.levelUp();
     }
   }

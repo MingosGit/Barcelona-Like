@@ -112,6 +112,12 @@ caster, ambush, stabber, rider, wall, buffer`.
 | **Rata de Ciutat Vella** 🐀 | scurry | Vecina histórica de verdad: empadronada desde 1714, paga menos alquiler que tú |
 | **Cucaracha de bar de menú** 🪳 | scurry | Sale en manadas a las 3 AM; sobrevivirá a la gentrificación y a tu partida |
 | **Palomas de plaça Catalunya** 🕊️ | flyer (escuadrón) | Vuelan en flota, te confunden con una señora con pan; la de plaça Catalunya no huye: negocia |
+| **El Galán del Portal** 🌹 | charmer | Te aturde de puro encanto (💘) y te cobra el espectáculo en cèntims |
+| **Los Mellizos del Gym** 💪 | twins | Pareja sincronizada: flanquean por lados opuestos y cargan A LA VEZ |
+| **El del After Eternoo** 🕶️ | afters | Zigzag imposible; su contacto te deja la vista borrosa como su fin de semana |
+| **El Meador Fantasma** 🫣 | relief | Mira a los lados y deja charcos sospechosos que te frenan |
+| **El "Yo Solo Pasaba" de Robadors** 😅 | shy | SOLO avanza cuando no le miras (ángel llorón); congelado jura que venía a por pan |
+| **La Montse de Tota la Vida** 🥖 | caster | Zona de bronca en catalán: frena y drena, pero nunca baja de 5 HP — te deja vivo para que aprendas |
 | **Top manta desplegado** 🛍️ | manta | Monta la tienda entera en tu camino (tropiezas con el género); si te acercas, pliega en 0,2 s y reaparece 20 m más allá |
 
 Además, **cada enemigo suelta su frase icónica al verte por primera vez**

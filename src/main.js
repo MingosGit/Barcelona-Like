@@ -60,13 +60,26 @@ function flash() {
   setTimeout(() => (el.style.opacity = 0), 120);
 }
 
+let bossIntroT = null;
+function bossIntro(def) {
+  const el = $("bossintro");
+  el.querySelector(".bi-emoji").textContent = def.emoji;
+  el.querySelector(".bi-name").textContent = def.name;
+  el.querySelector(".bi-desc").textContent = def.intro;
+  el.classList.remove("show");
+  void el.offsetWidth; // reinicia las animaciones CSS
+  el.classList.add("show");
+  clearTimeout(bossIntroT);
+  bossIntroT = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
 // ------------------------------------------------------------ menú principal
 // ------------------------------------------------------------ desfile del menú
 // Los propios sprites del juego desfilan por la portada, cada uno con su
 // frase. La ciudad se presenta sola.
 const charCanvases = [];
-const PARADE_IDS = ["guiri", "charo", "cigarro", "taxista", "senyora", "pandilla", "crucerista", "mimo",
-  "rider", "vecino", "indepe", "facha", "hipster", "promotor", "cunyado", "rata", "gaviota", "kebabero"];
+const PARADE_IDS = ["guiri", "charo", "galan", "cigarro", "taxista", "gemelos", "senyora", "pandilla", "crucerista", "mimo",
+  "rider", "afters", "vecino", "montse", "indepe", "facha", "putero", "hipster", "promotor", "meador", "cunyado", "rata", "gaviota", "kebabero"];
 let parade = null;
 
 function initParade(w) {
@@ -233,7 +246,7 @@ function startRun() {
   const biome = BIOMES.find((b) => b.id === selBiome);
   const charDef = CHARACTERS.find((c) => c.id === selChar);
   const mods = MODS.filter((m) => selMods.has(m.id));
-  game = new Game(input, biome, charDef, { levelUp: onLevelUp, gameOver: onGameOver, toast, flash }, { turbo: TURBO, mods });
+  game = new Game(input, biome, charDef, { levelUp: onLevelUp, gameOver: onGameOver, toast, flash, bossIntro }, { turbo: TURBO, mods });
   window.__game = game; // depuración / tests automatizados
   paused = false;
   inLevelUp = false;
