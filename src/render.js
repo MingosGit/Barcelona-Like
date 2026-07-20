@@ -581,6 +581,47 @@ function drawEnemy(game, ctx, e, ex, ey, t) {
     drawManta(ctx, ex, ey + 10, { scale: 0.85 });
   }
 
+  // emboscadas con disfraz: el mimo ES una estatua, el trilero ES una caja
+  if (hidden && spec.hiddenStyle === "plinth") {
+    ctx.fillStyle = "#8d8a9c";
+    ctx.strokeStyle = "#241b2e";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.rect(ex - 15 * scale, ey - 2, 30 * scale, 8);
+    ctx.fill(); ctx.stroke();
+    // el mimo posa quieto sobre su peana, congelado (t fijo)
+    drawHumanoid(ctx, spec, ex, ey - 4, {
+      t: 0.2, moving: false, face: e.face || 1, scale, phase: 0,
+      alpha: 1, skin: e.skin, hairTone: e.hairTone,
+    });
+    return;
+  }
+  if (hidden && spec.hiddenStyle === "box") {
+    // caja de cartón "sospechosamente normal" con ojos asomando
+    ctx.fillStyle = "#b08a55";
+    ctx.strokeStyle = "#241b2e";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.rect(ex - 16 * scale, ey - 26 * scale, 32 * scale, 26 * scale);
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#00000044";
+    ctx.beginPath(); ctx.moveTo(ex, ey - 26 * scale); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.fillStyle = "#241b2e";
+    ctx.font = `${Math.round(7 * scale)}px Trebuchet MS`;
+    ctx.textAlign = "center";
+    ctx.fillText("FRÁGIL", ex, ey - 8 * scale);
+    // ojos por la ranura
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(ex - 8 * scale, ey - 20 * scale, 16 * scale, 4 * scale);
+    ctx.fillStyle = "#241b2e";
+    ctx.beginPath();
+    ctx.arc(ex - 4 * scale, ey - 18 * scale, 1.4 * scale, 0, TAU);
+    ctx.arc(ex + 4 * scale, ey - 18 * scale, 1.4 * scale, 0, TAU);
+    ctx.fill();
+    ctx.fillText("🥤", ex + 14 * scale, ey + 2); // los vasitos preparados
+    return;
+  }
+
   const opts = {
     t, moving, face: e.face || 1, scale, phase: e.phase || 0,
     alpha: hidden ? 0.45 : 1, flash: e.flashT || 0,

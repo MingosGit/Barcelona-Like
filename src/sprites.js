@@ -57,32 +57,138 @@ export function drawHumanoid(ctx, s, x, y, o) {
   if (s.vehicle) {
     drawVehicle(ctx, s, sc, t, skin, outfit, o);
   } else {
+    const bw = (s.build || 1) * 15 * sc, bh = 14.5 * sc;
+    const bodyTop = -7 * sc - bh;
+    // capa (estelada, bandera al hombro...) por detrás del cuerpo
+    if (s.cape) {
+      px(ctx, s.cape);
+      const flap = Math.sin(t * 4 + ph) * 2 * sc;
+      ctx.beginPath();
+      ctx.moveTo(-bw / 2, bodyTop + 2 * sc);
+      ctx.quadraticCurveTo(-bw - 4 * sc - flap, -8 * sc, -bw * 0.7 - flap, -1 * sc);
+      ctx.lineTo(-2 * sc, -4 * sc);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (s.capeStripes) {
+        ctx.strokeStyle = s.capeStripes;
+        ctx.lineWidth = 1.4 * sc;
+        for (let i = 1; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-bw / 2 - i * 2.2 * sc, bodyTop + (2 + i * 2) * sc);
+          ctx.lineTo(-bw * 0.7 - flap + i * 1.5 * sc, -1 * sc - i * 1.2 * sc);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = OUT;
+      }
+    }
     // piernas
     px(ctx, pants);
     const lw = 4.6 * sc, lh = 8 * sc;
     rr(ctx, -5.5 * sc, -lh + walk * 2.4 * sc, lw, lh, 2 * sc); ctx.fill(); ctx.stroke();
     rr(ctx, 1 * sc, -lh - walk * 2.4 * sc, lw, lh, 2 * sc); ctx.fill(); ctx.stroke();
-    // cuerpo
-    px(ctx, outfit);
-    const bw = (s.build || 1) * 15 * sc, bh = 14.5 * sc;
-    rr(ctx, -bw / 2, -7 * sc - bh, bw, bh, 5 * sc); ctx.fill(); ctx.stroke();
+    if (s.socksAndals) { // calcetines blancos con sandalias: el uniforme
+      ctx.fillStyle = "#f4f4f4";
+      ctx.fillRect(-5.5 * sc, -3 * sc + walk * 2.4 * sc, lw, 3 * sc);
+      ctx.fillRect(1 * sc, -3 * sc - walk * 2.4 * sc, lw, 3 * sc);
+    }
+    // cuerpo (sin camiseta = torso de piel, con quemadura si toca)
+    px(ctx, s.shirtless ? skin : outfit);
+    rr(ctx, -bw / 2, bodyTop, bw, bh, 5 * sc); ctx.fill(); ctx.stroke();
     if (s.stripes) { // camiseta a rayas (mimo, marinero)
       ctx.save(); ctx.clip();
       ctx.fillStyle = s.stripes;
-      for (let i = 0; i < 3; i++) ctx.fillRect(-bw / 2, -7 * sc - bh + (2.5 + i * 5) * sc, bw, 2.2 * sc);
+      for (let i = 0; i < 3; i++) ctx.fillRect(-bw / 2, bodyTop + (2.5 + i * 5) * sc, bw, 2.2 * sc);
+      ctx.restore();
+    }
+    if (s.pattern === "leopard") { // estampado leopardo, elegancia máxima
+      ctx.save(); rr(ctx, -bw / 2, bodyTop, bw, bh, 5 * sc); ctx.clip();
+      ctx.fillStyle = "#00000055";
+      for (let i = 0; i < 7; i++) {
+        ctx.beginPath();
+        ctx.arc(-bw / 2 + ((i * 37) % bw), bodyTop + ((i * 23) % bh), 1.7 * sc, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if (s.pattern === "quilt") { // bata de guatiné, blindaje de barrio
+      ctx.save(); rr(ctx, -bw / 2, bodyTop, bw, bh, 5 * sc); ctx.clip();
+      ctx.strokeStyle = "#00000033";
+      ctx.lineWidth = 1 * sc;
+      for (let i = -3; i < 4; i++) {
+        ctx.beginPath(); ctx.moveTo(i * 5 * sc - 8 * sc, bodyTop); ctx.lineTo(i * 5 * sc + 8 * sc, bodyTop + bh); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i * 5 * sc + 8 * sc, bodyTop); ctx.lineTo(i * 5 * sc - 8 * sc, bodyTop + bh); ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (s.pattern === "cases") { // chaleco tapizado de fundas de móvil
+      ctx.save(); rr(ctx, -bw / 2, bodyTop, bw, bh, 5 * sc); ctx.clip();
+      const cols = ["#e05a72", "#3db6a5", "#e8c33d", "#c96be0", "#5f9e52"];
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = cols[i % cols.length];
+        ctx.fillRect(-bw / 2 + ((i * 29) % (bw - 4 * sc)), bodyTop + ((i * 17) % (bh - 6 * sc)), 4 * sc, 6 * sc);
+      }
       ctx.restore();
     }
     if (s.vest) { // chaleco (rider, obrero)
       px(ctx, s.vest);
-      rr(ctx, -bw / 2 + 1.5 * sc, -7 * sc - bh + 1 * sc, bw * 0.34, bh - 2 * sc, 2 * sc); ctx.fill();
-      rr(ctx, bw / 2 - 1.5 * sc - bw * 0.34, -7 * sc - bh + 1 * sc, bw * 0.34, bh - 2 * sc, 2 * sc); ctx.fill();
+      rr(ctx, -bw / 2 + 1.5 * sc, bodyTop + 1 * sc, bw * 0.34, bh - 2 * sc, 2 * sc); ctx.fill();
+      rr(ctx, bw / 2 - 1.5 * sc - bw * 0.34, bodyTop + 1 * sc, bw * 0.34, bh - 2 * sc, 2 * sc); ctx.fill();
+    }
+    // BARRIGA: el rasgo más honesto de la ciudad
+    if (s.belly) {
+      px(ctx, s.shirtless ? skin : s.belly === true ? outfit : s.belly);
+      ctx.beginPath();
+      ctx.ellipse(0.5 * sc, -6 * sc, bw * 0.42, 5.5 * sc, 0, 0, TAU);
+      ctx.fill(); ctx.stroke();
+      if (s.shirtless) { // ombligo orgulloso
+        ctx.fillStyle = OUT;
+        ctx.beginPath(); ctx.arc(0.5 * sc, -5.5 * sc, 0.9 * sc, 0, TAU); ctx.fill();
+      }
+      if (s.tattoo) {
+        ctx.fillStyle = "#3a6a8a";
+        ctx.font = `bold ${Math.round(3.6 * sc)}px Trebuchet MS`;
+        ctx.textAlign = "center";
+        ctx.fillText(s.tattoo, 0.5 * sc, -5 * sc);
+      }
+    }
+    // cadena de oro
+    if (s.chain) {
+      ctx.strokeStyle = "#e8c33d";
+      ctx.lineWidth = 1.6 * sc;
+      ctx.beginPath();
+      ctx.arc(0, bodyTop + 1.5 * sc, 4.6 * sc, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+      ctx.fillStyle = "#e8c33d";
+      ctx.beginPath(); ctx.arc(0, bodyTop + 6.5 * sc, 1.5 * sc, 0, TAU); ctx.fill();
+      ctx.strokeStyle = OUT;
+    }
+    // cámara colgada al cuello (crucerista)
+    if (s.camera) {
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 1.2 * sc;
+      ctx.beginPath();
+      ctx.moveTo(-4 * sc, bodyTop + 1 * sc);
+      ctx.quadraticCurveTo(0, bodyTop + 6 * sc, 4 * sc, bodyTop + 1 * sc);
+      ctx.stroke();
+      ctx.strokeStyle = OUT;
+      px(ctx, "#2c2c34");
+      rr(ctx, -3.5 * sc, bodyTop + 5 * sc, 7 * sc, 5 * sc, 1 * sc); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#9fd7ff";
+      ctx.beginPath(); ctx.arc(0, bodyTop + 7.5 * sc, 1.5 * sc, 0, TAU); ctx.fill();
     }
     // brazos
-    px(ctx, outfit);
+    px(ctx, s.shirtless ? skin : outfit);
     const aw = 3.6 * sc;
-    rr(ctx, -bw / 2 - aw + 0.5 * sc, -6 * sc - bh + 2 * sc + walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
-    rr(ctx, bw / 2 - 0.5 * sc, -6 * sc - bh + 2 * sc - walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
-    drawHead(ctx, s, sc, skin, o, -7 * sc - bh);
+    rr(ctx, -bw / 2 - aw + 0.5 * sc, bodyTop + 2 * sc + walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
+    rr(ctx, bw / 2 - 0.5 * sc, bodyTop + 2 * sc - walk * 1.6 * sc, aw, 9 * sc, 2 * sc); ctx.fill(); ctx.stroke();
+    drawHead(ctx, s, sc, skin, o, bodyTop);
+    // gotas de sudor (explotación, agosto o ambas)
+    if (s.sweat) {
+      const k = (t * 1.6 + ph) % 1;
+      ctx.fillStyle = `rgba(120,190,255,${0.9 * (1 - k)})`;
+      ctx.beginPath();
+      ctx.arc(9 * sc, bodyTop - 8 * sc + k * 9 * sc, 1.6 * sc, 0, TAU);
+      ctx.fill();
+    }
   }
 
   // accesorio en mano (emoji pequeño como PROP, no como personaje)
@@ -129,9 +235,36 @@ function drawHead(ctx, s, sc, skin, o, bodyTop) {
       ctx.fillStyle = "#cfcfcf";
       ctx.arc(0, hy, hr, Math.PI, 0); ctx.fill();
       ctx.beginPath(); ctx.arc(0, hy - hr, 2.8 * sc, 0, TAU); ctx.fill();
+    } else if (s.hairStyle === "dreads") { // rastas de asamblea
+      ctx.arc(0, hy, hr, Math.PI, 0); ctx.fill();
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 2.6 * sc, hy - hr + 1 * sc);
+        ctx.quadraticCurveTo(i * 4 * sc, hy + 2 * sc, i * 4.4 * sc, hy + 6 * sc);
+        ctx.lineWidth = 1.8 * sc;
+        ctx.strokeStyle = hair;
+        ctx.stroke();
+      }
+      ctx.strokeStyle = OUT;
+      ctx.lineWidth = Math.max(1.4, 1.6 * sc);
+    } else if (s.hairStyle === "slick") { // gomina de promotor
+      ctx.arc(0, hy, hr, Math.PI * 1.1, -Math.PI * 0.1); ctx.fill();
+      ctx.strokeStyle = "#ffffff44";
+      ctx.lineWidth = 0.8 * sc;
+      ctx.beginPath(); ctx.arc(0, hy, hr * 0.8, Math.PI * 1.2, Math.PI * 1.6); ctx.stroke();
+      ctx.strokeStyle = OUT;
+      ctx.lineWidth = Math.max(1.4, 1.6 * sc);
     } else { // corto
       ctx.arc(0, hy, hr, Math.PI * 1.05, -Math.PI * 0.05);
       ctx.fill();
+    }
+  }
+  // rulos de peluquería de barrio (van SOBRE el pelo)
+  if (s.curlers) {
+    px(ctx, "#f2a3c0");
+    for (let i = -1; i <= 1; i++) {
+      rr(ctx, i * 4 * sc - 1.8 * sc, hy - hr - 1.5 * sc + Math.abs(i) * sc, 3.6 * sc, 3 * sc, 1.4 * sc);
+      ctx.fill(); ctx.stroke();
     }
   }
 
@@ -179,10 +312,62 @@ function drawHead(ctx, s, sc, skin, o, bodyTop) {
       ctx.fillStyle = "#9fd7ff";
       ctx.fillRect(4.2 * sc, hy + 3.8 * sc, 2.6 * sc, 4 * sc);
       break;
+    case "duck": // morritos de story de Instagram
+      ctx.beginPath(); ctx.arc(-ex, ey, 1.3 * sc, 0, TAU); ctx.arc(ex, ey, 1.3 * sc, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#d96a8a";
+      ctx.beginPath(); ctx.ellipse(0.3 * sc, hy + 3 * sc, 2.2 * sc, 1.5 * sc, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = OUT; ctx.lineWidth = 0.8 * sc;
+      ctx.beginPath(); ctx.moveTo(-1.2 * sc, hy + 3 * sc); ctx.lineTo(1.8 * sc, hy + 3 * sc); ctx.stroke();
+      break;
+    case "spiral": { // ojos de espiral: 14 mojitos
+      ctx.lineWidth = 0.9 * sc;
+      for (const sx of [-ex, ex]) {
+        ctx.beginPath();
+        ctx.arc(sx, ey, 1.9 * sc, 0, TAU * 0.8);
+        ctx.arc(sx, ey, 1 * sc, 0, TAU * 0.6);
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(0.3 * sc, hy + 3.2 * sc, 1.8 * sc, 1.1 * sc, 0, 0, TAU); ctx.stroke();
+      break;
+    }
+    case "tired": // ojeras de tres trabajos
+      ctx.beginPath(); ctx.arc(-ex, ey, 1.1 * sc, 0, TAU); ctx.arc(ex, ey, 1.1 * sc, 0, TAU); ctx.fill();
+      ctx.strokeStyle = "#00000055";
+      ctx.lineWidth = 1 * sc;
+      ctx.beginPath(); ctx.arc(-ex, ey + 1.4 * sc, 1.7 * sc, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex, ey + 1.4 * sc, 1.7 * sc, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+      ctx.strokeStyle = OUT;
+      ctx.beginPath(); ctx.moveTo(-1.5 * sc, hy + 3.2 * sc); ctx.lineTo(1.8 * sc, hy + 3.4 * sc); ctx.stroke();
+      break;
+    case "grin": { // sonrisa de comercial: DEMASIADOS dientes
+      ctx.beginPath(); ctx.arc(-ex, ey, 1.2 * sc, 0, TAU); ctx.arc(ex, ey, 1.2 * sc, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.arc(0.3 * sc, hy + 2 * sc, 3 * sc, 0.1 * Math.PI, 0.9 * Math.PI); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = OUT; ctx.lineWidth = 0.7 * sc;
+      ctx.stroke();
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath(); ctx.moveTo(0.3 * sc + i * 1.5 * sc, hy + 2.3 * sc); ctx.lineTo(0.3 * sc + i * 1.5 * sc, hy + 4 * sc); ctx.stroke();
+      }
+      break;
+    }
     default: // neutral
       ctx.beginPath(); ctx.arc(-ex, ey, 1.2 * sc, 0, TAU); ctx.arc(ex, ey, 1.2 * sc, 0, TAU); ctx.fill();
       ctx.lineWidth = 1.1 * sc;
       ctx.beginPath(); ctx.arc(0.4 * sc, hy + 2.2 * sc, 1.8 * sc, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  }
+  // palillo de bar en la boca
+  if (s.toothpick) {
+    ctx.strokeStyle = "#c8a562";
+    ctx.lineWidth = 1 * sc;
+    ctx.beginPath(); ctx.moveTo(1 * sc, hy + 2.8 * sc); ctx.lineTo(5.5 * sc, hy + 4.2 * sc); ctx.stroke();
+    ctx.strokeStyle = OUT;
+  }
+  // uniceja de opiniones firmes
+  if (s.unibrow) {
+    ctx.strokeStyle = hair;
+    ctx.lineWidth = 1.6 * sc;
+    ctx.beginPath(); ctx.moveTo(-ex - 1.8 * sc, ey - 2.4 * sc); ctx.quadraticCurveTo(0, ey - 3.4 * sc, ex + 1.8 * sc, ey - 2.4 * sc); ctx.stroke();
+    ctx.strokeStyle = OUT;
   }
 
   // barba/mascarilla/bigote

@@ -13,6 +13,8 @@ import { formatTime } from "./util.js";
 import { initAds } from "./ads.js";
 import { sfx, setMuted, isMuted } from "./sfx.js";
 import { cloudAvailable, cloudSync, cloudPush, exportSaveCode, importSaveCode } from "./cloud.js";
+import { drawHumanoid, drawRat, drawRoach, drawBird, SKIN_TONES, HAIR_TONES } from "./sprites.js";
+import { ENEMIES } from "./data/enemies.js";
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("game");
@@ -59,6 +61,87 @@ function flash() {
 }
 
 // ------------------------------------------------------------ menú principal
+// ------------------------------------------------------------ desfile del menú
+// Los propios sprites del juego desfilan por la portada, cada uno con su
+// frase. La ciudad se presenta sola.
+const charCanvases = [];
+const PARADE_IDS = ["guiri", "charo", "cigarro", "taxista", "senyora", "pandilla", "crucerista", "mimo",
+  "rider", "vecino", "indepe", "facha", "hipster", "promotor", "cunyado", "rata", "gaviota", "kebabero"];
+let parade = null;
+
+function initParade(w) {
+  parade = [];
+  let x = 0;
+  for (const id of PARADE_IDS) {
+    const def = ENEMIES[id];
+    parade.push({
+      def, x: x, speed: 26 + Math.random() * 26,
+      skin: def.sprite?.skin || SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)],
+      hair: HAIR_TONES[Math.floor(Math.random() * HAIR_TONES.length)],
+      phase: Math.random() * 6, sayT: 3 + Math.random() * 14,
+    });
+    x += 62 + Math.random() * 40;
+  }
+  parade.total = Math.max(x, w + 80);
+}
+
+function renderMenuExtras(now) {
+  if (!$("menu").classList.contains("open")) return;
+  const t = now / 1000;
+  const pc = $("parade");
+  if (pc) {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cw = pc.clientWidth, chh = pc.clientHeight;
+    if (pc.width !== cw * dpr) { pc.width = cw * dpr; pc.height = chh * dpr; }
+    const c = pc.getContext("2d");
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.clearRect(0, 0, cw, chh);
+    // suelo del desfile
+    c.fillStyle = "#00000030";
+    c.fillRect(0, chh - 16, cw, 16);
+    if (!parade) initParade(cw);
+    for (const w of parade) {
+      w.x += w.speed / 60;
+      if (w.x > parade.total) w.x -= parade.total;
+      const x = w.x - 60;
+      if (x < -60 || x > cw + 60) continue;
+      const y = chh - 14;
+      const spec = w.def.sprite || {};
+      const o = { t, moving: true, face: 1, scale: 1.08, phase: w.phase, skin: w.skin, hairTone: w.hair };
+      if (spec.custom === "rat") drawRat(c, x, y, o);
+      else if (spec.custom === "roach") drawRoach(c, x, y, o);
+      else if (spec.custom === "bird") drawBird(c, x, y, { ...o, color: spec.color });
+      else drawHumanoid(c, spec, x, y, o);
+      // de vez en cuando, uno suelta su frase
+      w.sayT -= 1 / 60;
+      if (w.sayT < 0) w.sayT = 10 + Math.random() * 18;
+      if (w.sayT > 8.2 && w.sayT < 10.6) {
+        const text = w.def.intro || w.def.quotes[0];
+        c.font = "10px Trebuchet MS";
+        const tw = c.measureText(text).width + 12;
+        c.fillStyle = "rgba(255,255,255,.94)";
+        const bx = Math.min(Math.max(x, tw / 2 + 2), cw - tw / 2 - 2);
+        c.beginPath();
+        c.roundRect(bx - tw / 2, y - 62, tw, 16, 7);
+        c.fill();
+        c.fillStyle = "#222";
+        c.textAlign = "center";
+        c.fillText(text, bx, y - 50);
+      }
+    }
+  }
+  // retratos animados de las cartas de personaje
+  for (const cc of charCanvases) {
+    if (!cc.cv.isConnected) continue;
+    const c = cc.cv.getContext("2d");
+    c.setTransform(2, 0, 0, 2, 0, 0);
+    c.clearRect(0, 0, 72, 72);
+    c.fillStyle = "#00000038";
+    c.beginPath(); c.ellipse(36, 64, 18, 5, 0, 0, Math.PI * 2); c.fill();
+    drawHumanoid(c, cc.sprite || {}, 36, 66, { t, moving: false, face: 1, scale: 1.6, phase: cc.phase });
+  }
+}
+
 const TAGLINES = [
   "L'última persona que parla català contra los tópicos de la ciudad.",
   "Sobrevive a tu propio barrio. Nadie lo ha conseguido aún.",
@@ -75,13 +158,15 @@ function buildMenu() {
 
   const cr = $("charrow");
   cr.innerHTML = "";
+  charCanvases.length = 0;
   for (const c of CHARACTERS) {
     const unlocked = meta.unlockedChars.includes(c.id);
     const div = document.createElement("div");
     div.className = "selcard" + (selChar === c.id ? " sel" : "") + (unlocked ? "" : " locked");
-    div.innerHTML = `<span class="em">${c.emoji}</span><span class="nm">${c.name}</span>
+    div.innerHTML = `<canvas class="charcv" width="144" height="144"></canvas><span class="nm">${c.name}</span>
       <span class="ds">${c.desc}</span>` +
       (unlocked ? "" : `<span class="lk">🔒 ${c.cost} cèntims — toca para desbloquear</span>`);
+    charCanvases.push({ cv: div.querySelector("canvas"), sprite: c.sprite, phase: Math.random() * 6 });
     div.onclick = () => {
       if (!unlocked) {
         if (meta.coins >= c.cost) {
@@ -107,7 +192,8 @@ function buildMenu() {
   for (const b of BIOMES) {
     const unlocked = meta.unlockedBiomes.includes(b.id);
     const div = document.createElement("div");
-    div.className = "selcard" + (selBiome === b.id ? " sel" : "") + (unlocked ? "" : " locked");
+    div.className = "selcard biomecard" + (selBiome === b.id ? " sel" : "") + (unlocked ? "" : " locked");
+    div.style.background = `linear-gradient(165deg, ${b.ground}33, #221733 62%)`;
     div.innerHTML = `<span class="em">${b.emoji}</span><span class="nm">${b.name}</span>
       <span class="ds">${b.desc}</span>` +
       (unlocked ? "" : `<span class="lk">🔒 Vence al jefe del barrio anterior</span>`);
@@ -233,7 +319,9 @@ function onGameOver(res) {
     t.className = "victoria";
     $("deathquote").textContent = BOSSES[res.biome.boss].name + " ha caído. El barrio respira... hasta la próxima temporada alta.";
   } else {
-    t.textContent = "HAS SIDO GENTRIFICADO";
+    const titles = ["HAS SIDO GENTRIFICADO", "DESAHUCIADO", "FIN DE CONTRATO (SIN RENOVAR)",
+      "EL BARRIO TE HA ESCUPIDO", "CONVERTIDO EN AIRBNB", "BAJA POR TÓPICOS"];
+    t.textContent = titles[Math.floor(Math.random() * titles.length)];
     t.className = "derrota";
     $("deathquote").textContent = DEATH_QUOTES[res.killedBy] || DEATH_QUOTES.generic;
   }
@@ -284,7 +372,7 @@ $("pausebtn").onclick = () => { if (game && !inLevelUp && !game.over) { paused =
 $("resumebtn").onclick = () => { paused = false; hide("paused"); lastT = performance.now(); };
 $("quitbtn").onclick = quitToMenu;
 $("startbtn").onclick = startRun;
-$("againbtn").onclick = () => { hide("gameover"); buildMenu(); show("menu"); };
+$("againbtn").onclick = () => { game = null; hide("gameover"); buildMenu(); show("menu"); };
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && game && !game.over && !inLevelUp) { paused = true; show("paused"); }
 });
@@ -298,7 +386,7 @@ window.addEventListener("keydown", (e) => {
 // ------------------------------------------------------------ bucle
 function loop(t) {
   requestAnimationFrame(loop);
-  if (!game) return;
+  if (!game) { renderMenuExtras(t); return; }
   const dt = Math.min((t - lastT) / 1000, 0.1);
   lastT = t;
   if (!paused && !inLevelUp && !game.over) {
